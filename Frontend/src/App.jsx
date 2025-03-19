@@ -30,8 +30,25 @@ const authSlice = createSlice({
   },
 });
 
-const store = configureStore({ reducer: { auth: authSlice.reducer } });
+const listingsSlice = createSlice({
+  name: "listings",
+  initialState: { listings: [] },
+  reducers: {
+    addListing: (state, action) => {
+      state.listings.push(action.payload);
+    },
+  },
+});
+
+const store = configureStore({
+  reducer: {
+    auth: authSlice.reducer,
+    listings: listingsSlice.reducer,
+  },
+});
+
 const { signup, login, logout } = authSlice.actions;
+const { addListing } = listingsSlice.actions;
 
 // Navbar Component
 function Navbar() {
@@ -292,7 +309,7 @@ function SearchBar() {
   );
 }
 
-// ListingCard Component with Slideshow and Contact
+// ListingCard Component
 function ListingCard({ listing }) {
   const [showBooking, setShowBooking] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -480,62 +497,13 @@ function Home() {
 
 // Listings Component
 function Listings() {
-  const [listings, setListings] = useState([]);
+  const listings = useSelector((state) => state.listings.listings); // Get from Redux
+  const [filteredListings, setFilteredListings] = useState([]);
   const location = useLocation();
-
-  const dummyListings = [
-    {
-      _id: "1",
-      title: "2-Bed PG Near Station",
-      type: "PG",
-      rent: 8000,
-      location: "Mumbai",
-      facilities: ["WiFi", "Food"],
-      photos: [
-        "https://via.placeholder.com/300x200?text=PG+1",
-        "https://via.placeholder.com/300x200?text=PG+2",
-        "https://via.placeholder.com/300x200?text=PG+3",
-      ],
-      available: true,
-      rating: 4.5,
-      contact: "9876543210",
-    },
-    {
-      _id: "2",
-      title: "Cozy Single Room",
-      type: "Room",
-      rent: 6000,
-      location: "Delhi",
-      facilities: ["AC", "Parking"],
-      photos: [
-        "https://via.placeholder.com/300x200?text=Room+1",
-        "https://via.placeholder.com/300x200?text=Room+2",
-      ],
-      available: false,
-      rating: 4.0,
-      contact: "9123456789",
-    },
-    {
-      _id: "3",
-      title: "Student Hostel",
-      type: "Hostel",
-      rent: 5000,
-      location: "Bangalore",
-      facilities: ["WiFi", "Food", "Laundry"],
-      photos: [
-        "https://via.placeholder.com/300x200?text=Hostel+1",
-        "https://via.placeholder.com/300x200?text=Hostel+2",
-        "https://via.placeholder.com/300x200?text=Hostel+3",
-      ],
-      available: true,
-      rating: 4.2,
-      contact: "9988776655",
-    },
-  ];
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const filteredListings = dummyListings.filter((listing) => {
+    const filtered = listings.filter((listing) => {
       const locationParam = params.get("location");
       const rentParam = params.get("rent");
       const facilityParam = params.get("facility");
@@ -547,16 +515,16 @@ function Listings() {
         (!typeParam || listing.type === typeParam)
       );
     });
-    setListings(filteredListings);
-  }, [location.search]);
+    setFilteredListings(filtered);
+  }, [location.search, listings]);
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 pt-20">
       <div className="container mx-auto">
         <h2 className="text-2xl font-bold text-center mb-6">Available Listings</h2>
-        {listings.length > 0 ? (
+        {filteredListings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing) => (
+            {filteredListings.map((listing) => (
               <ListingCard key={listing._id} listing={listing} />
             ))}
           </div>
@@ -571,6 +539,8 @@ function Listings() {
 // OwnerDashboard Component
 function OwnerDashboard() {
   const { role } = useSelector((state) => state.auth);
+  const listings = useSelector((state) => state.listings.listings); // Get from Redux
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -579,7 +549,6 @@ function OwnerDashboard() {
     }
   }, [role, navigate]);
 
-  const [listings, setListings] = useState([]);
   const [newListing, setNewListing] = useState({
     title: "",
     type: "PG",
@@ -588,46 +557,22 @@ function OwnerDashboard() {
     facilities: "",
     photos: "",
     contact: "",
+    available: true, // Added default availability
   });
-
-  const dummyOwnerListings = [
-    {
-      _id: "1",
-      title: "PG 1",
-      type: "PG",
-      rent: 8000,
-      tenants: 2,
-      revenue: 16000,
-      photos: [
-        "https://via.placeholder.com/300x200?text=PG+1",
-        "https://via.placeholder.com/300x200?text=PG+2",
-      ],
-      contact: "9876543210",
-    },
-    {
-      _id: "2",
-      title: "Single Room",
-      type: "Room",
-      rent: 6000,
-      tenants: 1,
-      revenue: 6000,
-      photos: ["https://via.placeholder.com/300x200?text=Room+1"],
-      contact: "9123456789",
-    },
-  ];
 
   const handleAddListing = (e) => {
     e.preventDefault();
     const photosArray = newListing.photos.split(",").map((url) => url.trim());
-    setListings([
-      ...listings,
-      {
-        ...newListing,
-        facilities: newListing.facilities.split(",").map((f) => f.trim()),
-        photos: photosArray,
-        _id: Date.now().toString(),
-      },
-    ]);
+    const facilitiesArray = newListing.facilities.split(",").map((f) => f.trim());
+    const listing = {
+      ...newListing,
+      facilities: facilitiesArray,
+      photos: photosArray,
+      _id: Date.now().toString(),
+      rent: parseInt(newListing.rent), // Convert rent to number
+      rating: null, // Default rating
+    };
+    dispatch(addListing(listing));
     setNewListing({
       title: "",
       type: "PG",
@@ -636,6 +581,7 @@ function OwnerDashboard() {
       facilities: "",
       photos: "",
       contact: "",
+      available: true,
     });
     alert("Listing added!");
   };
@@ -710,18 +656,22 @@ function OwnerDashboard() {
             </form>
           </div>
           <div>
-            {dummyOwnerListings.map((listing) => (
-              <div key={listing._id} className="bg-white p-6 rounded-lg shadow-lg mb-4">
-                <h3 className="text-xl font-semibold">{listing.title}</h3>
-                <p className="text-gray-600">Type: {listing.type}</p>
-                <p className="text-gray-600">Tenants: {listing.tenants}</p>
-                <p className="text-gray-600">Revenue: ₹{listing.revenue}</p>
-                <p className="text-gray-600">Contact: {listing.contact}</p>
-                <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                  Chat with Tenants
-                </button>
-              </div>
-            ))}
+            {listings.length > 0 ? (
+              listings.map((listing) => (
+                <div key={listing._id} className="bg-white p-6 rounded-lg shadow-lg mb-4">
+                  <h3 className="text-xl font-semibold">{listing.title}</h3>
+                  <p className="text-gray-600">Type: {listing.type}</p>
+                  <p className="text-gray-600">Rent: ₹{listing.rent}</p>
+                  <p className="text-gray-600">Location: {listing.location}</p>
+                  <p className="text-gray-600">Contact: {listing.contact}</p>
+                  <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Chat with Tenants
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600">No listings added yet.</p>
+            )}
           </div>
         </div>
       </div>
