@@ -44,7 +44,7 @@ function Navbar() {
     <nav className="bg-blue-600 text-white p-4 shadow-md fixed w-full top-0 z-10">
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="text-2xl font-bold flex items-center">
-          <span className="mr-2">PG Finder</span>
+          <span className="mr-2">Stay Finder</span>
           {user && (
             <span className="bg-white text-blue-600 w-8 h-8 flex items-center justify-center rounded-full">
               {userInitial}
@@ -113,8 +113,8 @@ function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">Welcome to PG Finder</h2>
-        <p className="text-center text-gray-600 mb-6">Sign up to get started</p>
+        <h2 className="text-2xl font-bold mb-4 text-center">Welcome to Stay Finder</h2>
+        <p className="text-center text-gray-600 mb-6">Sign up to find or list stays</p>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleSignup}>
           <div className="mb-4">
@@ -195,7 +195,7 @@ function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">Login to PG Finder</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center">Login to Stay Finder</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleLogin}>
           <div className="mb-4">
@@ -235,16 +235,17 @@ function SearchBar() {
   const [location, setLocation] = useState("");
   const [rent, setRent] = useState("");
   const [facility, setFacility] = useState("");
+  const [type, setType] = useState("");
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
     e.preventDefault();
-    navigate(`/listings?location=${location}&rent=${rent}&facility=${facility}`);
+    navigate(`/listings?location=${location}&rent=${rent}&facility=${facility}&type=${type}`);
   };
 
   return (
-    <form onSubmit={handleSearch} className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <form onSubmit={handleSearch} className="bg-white p-6 rounded-lg shadow-lg max-w-3xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <input
           type="text"
           placeholder="Location (e.g., Mumbai)"
@@ -270,6 +271,16 @@ function SearchBar() {
           <option value="AC">AC</option>
           <option value="Parking">Parking</option>
         </select>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Type</option>
+          <option value="PG">PG</option>
+          <option value="Room">Room</option>
+          <option value="Hostel">Hostel</option>
+        </select>
       </div>
       <button
         type="submit"
@@ -281,23 +292,52 @@ function SearchBar() {
   );
 }
 
-// ListingCard Component
+// ListingCard Component with Slideshow and Contact
 function ListingCard({ listing }) {
   const [showBooking, setShowBooking] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showContact, setShowContact] = useState(false);
 
   const handleBook = () => {
-    alert("Booking initiated with Razorpay!");
+    alert(`Booking initiated for ${listing.type}: ${listing.title} with Razorpay!`);
+  };
+
+  const nextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % listing.photos.length);
+  };
+
+  const prevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + listing.photos.length) % listing.photos.length);
   };
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
-      <img
-        src={listing.photos[0] || "https://via.placeholder.com/300x200"}
-        alt={listing.title}
-        className="w-full h-40 object-cover rounded-t-lg"
-      />
+      <div className="relative">
+        <img
+          src={listing.photos[currentPhotoIndex] || "https://via.placeholder.com/300x200"}
+          alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
+          className="w-full h-40 object-cover rounded-t-lg"
+        />
+        {listing.photos.length > 1 && (
+          <>
+            <button
+              onClick={prevPhoto}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-1 rounded-full hover:bg-gray-600"
+            >
+              &lt;
+            </button>
+            <button
+              onClick={nextPhoto}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-1 rounded-full hover:bg-gray-600"
+            >
+              &gt;
+            </button>
+          </>
+        )}
+      </div>
       <div className="p-4">
         <h3 className="text-lg font-semibold">{listing.title}</h3>
+        <p className="text-gray-600">Type: {listing.type}</p>
         <p className="text-gray-600">Rent: ₹{listing.rent}</p>
         <p className="text-gray-600">Location: {listing.location}</p>
         <p className="text-gray-600">Facilities: {listing.facilities.join(", ")}</p>
@@ -318,7 +358,18 @@ function ListingCard({ listing }) {
               Confirm Booking
             </button>
           )}
+          <button
+            onClick={() => setShowContact(!showContact)}
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+          >
+            {showContact ? "Hide Contact" : "Contact Owner"}
+          </button>
         </div>
+        {showContact && (
+          <p className="mt-2 text-gray-800 font-semibold">
+            Contact: {listing.contact || "Not provided"}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -332,10 +383,10 @@ function Home() {
     <div className="min-h-screen bg-gray-100 pt-20">
       <div className="bg-blue-600 text-white py-16 text-center">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          Find Your Perfect PG with Ease
+          Find Your Perfect Stay with Ease
         </h1>
         <p className="text-lg md:text-xl max-w-2xl mx-auto mb-6">
-          Discover comfortable stays or list your property effortlessly with PG Finder – your one-stop solution for tenants and owners.
+          Discover comfortable PGs, rooms, or hostels, or list your property effortlessly with Stay Finder – your one-stop solution for tenants and owners.
         </p>
         <div className="flex justify-center space-x-4">
           <Link
@@ -359,35 +410,35 @@ function Home() {
           Search for Your Ideal Stay
         </h2>
         <p className="text-center text-gray-600 mb-8">
-          Enter your preferences and find the perfect PG in seconds.
+          Find PGs, rooms, or hostels that match your preferences in seconds.
         </p>
         <SearchBar />
       </div>
       <div className="bg-white py-12">
         <div className="container mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
-            Why Choose PG Finder?
+            Why Choose Stay Finder?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-6">
               <span className="text-4xl text-blue-600 mb-4">🏠</span>
               <h3 className="text-xl font-semibold mb-2">For Tenants</h3>
               <p className="text-gray-600">
-                Search verified PGs, filter by location and budget, and book securely online.
+                Search verified PGs, rooms, and hostels, filter by location and budget, and book securely online.
               </p>
             </div>
             <div className="text-center p-6">
               <span className="text-4xl text-blue-600 mb-4">🔑</span>
               <h3 className="text-xl font-semibold mb-2">For Owners</h3>
               <p className="text-gray-600">
-                List your property, manage tenants, and track revenue with ease.
+                List your PGs, rooms, or hostels, manage tenants, and track revenue with ease.
               </p>
             </div>
             <div className="text-center p-6">
               <span className="text-4xl text-blue-600 mb-4">✅</span>
               <h3 className="text-xl font-semibold mb-2">Trusted Platform</h3>
               <p className="text-gray-600">
-                Join a growing community of satisfied users and owners.
+                Join a growing community of satisfied tenants and owners.
               </p>
             </div>
           </div>
@@ -400,13 +451,13 @@ function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <p className="text-gray-600 italic mb-4">
-              "Found a great PG near my office in just a few clicks!"
+              "Found a perfect hostel near my college in no time!"
             </p>
             <p className="font-semibold">– Priya, Tenant</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
             <p className="text-gray-600 italic mb-4">
-              "Listing my property was so simple, and I got tenants quickly."
+              "Listing my rooms was easy, and I got tenants quickly."
             </p>
             <p className="font-semibold">– Rajesh, Owner</p>
           </div>
@@ -414,7 +465,7 @@ function Home() {
       </div>
       <div className="bg-blue-600 text-white py-8 text-center">
         <h3 className="text-xl md:text-2xl font-semibold mb-4">
-          Ready to Find or List Your PG?
+          Ready to Find or List Your Stay?
         </h3>
         <Link
           to={role === "owner" ? "/owner-dashboard" : "/listings"}
@@ -436,22 +487,49 @@ function Listings() {
     {
       _id: "1",
       title: "2-Bed PG Near Station",
+      type: "PG",
       rent: 8000,
       location: "Mumbai",
       facilities: ["WiFi", "Food"],
-      photos: ["https://via.placeholder.com/300x200"],
+      photos: [
+        "https://via.placeholder.com/300x200?text=PG+1",
+        "https://via.placeholder.com/300x200?text=PG+2",
+        "https://via.placeholder.com/300x200?text=PG+3",
+      ],
       available: true,
       rating: 4.5,
+      contact: "9876543210",
     },
     {
       _id: "2",
-      title: "Cozy Rental Room",
+      title: "Cozy Single Room",
+      type: "Room",
       rent: 6000,
       location: "Delhi",
       facilities: ["AC", "Parking"],
-      photos: ["https://via.placeholder.com/300x200"],
+      photos: [
+        "https://via.placeholder.com/300x200?text=Room+1",
+        "https://via.placeholder.com/300x200?text=Room+2",
+      ],
       available: false,
       rating: 4.0,
+      contact: "9123456789",
+    },
+    {
+      _id: "3",
+      title: "Student Hostel",
+      type: "Hostel",
+      rent: 5000,
+      location: "Bangalore",
+      facilities: ["WiFi", "Food", "Laundry"],
+      photos: [
+        "https://via.placeholder.com/300x200?text=Hostel+1",
+        "https://via.placeholder.com/300x200?text=Hostel+2",
+        "https://via.placeholder.com/300x200?text=Hostel+3",
+      ],
+      available: true,
+      rating: 4.2,
+      contact: "9988776655",
     },
   ];
 
@@ -461,10 +539,12 @@ function Listings() {
       const locationParam = params.get("location");
       const rentParam = params.get("rent");
       const facilityParam = params.get("facility");
+      const typeParam = params.get("type");
       return (
         (!locationParam || listing.location.toLowerCase().includes(locationParam.toLowerCase())) &&
         (!rentParam || listing.rent <= parseInt(rentParam)) &&
-        (!facilityParam || listing.facilities.includes(facilityParam))
+        (!facilityParam || listing.facilities.includes(facilityParam)) &&
+        (!typeParam || listing.type === typeParam)
       );
     });
     setListings(filteredListings);
@@ -488,41 +568,79 @@ function Listings() {
   );
 }
 
-// OwnerDashboard Component (Restricted to Owners)
+// OwnerDashboard Component
 function OwnerDashboard() {
   const { role } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
-  // Redirect if not an owner
   useEffect(() => {
     if (role !== "owner") {
-      navigate("/listings"); // Redirect users to listings
+      navigate("/listings");
     }
   }, [role, navigate]);
 
   const [listings, setListings] = useState([]);
   const [newListing, setNewListing] = useState({
     title: "",
+    type: "PG",
     rent: "",
     location: "",
     facilities: "",
+    photos: "",
+    contact: "",
   });
 
   const dummyOwnerListings = [
-    { _id: "1", title: "PG 1", rent: 8000, tenants: 2, revenue: 16000 },
+    {
+      _id: "1",
+      title: "PG 1",
+      type: "PG",
+      rent: 8000,
+      tenants: 2,
+      revenue: 16000,
+      photos: [
+        "https://via.placeholder.com/300x200?text=PG+1",
+        "https://via.placeholder.com/300x200?text=PG+2",
+      ],
+      contact: "9876543210",
+    },
+    {
+      _id: "2",
+      title: "Single Room",
+      type: "Room",
+      rent: 6000,
+      tenants: 1,
+      revenue: 6000,
+      photos: ["https://via.placeholder.com/300x200?text=Room+1"],
+      contact: "9123456789",
+    },
   ];
 
   const handleAddListing = (e) => {
     e.preventDefault();
+    const photosArray = newListing.photos.split(",").map((url) => url.trim());
     setListings([
       ...listings,
-      { ...newListing, facilities: newListing.facilities.split(","), _id: Date.now().toString() },
+      {
+        ...newListing,
+        facilities: newListing.facilities.split(",").map((f) => f.trim()),
+        photos: photosArray,
+        _id: Date.now().toString(),
+      },
     ]);
-    setNewListing({ title: "", rent: "", location: "", facilities: "" });
+    setNewListing({
+      title: "",
+      type: "PG",
+      rent: "",
+      location: "",
+      facilities: "",
+      photos: "",
+      contact: "",
+    });
     alert("Listing added!");
   };
 
-  if (role !== "owner") return null; // Render nothing while redirecting
+  if (role !== "owner") return null;
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 pt-20">
@@ -534,30 +652,53 @@ function OwnerDashboard() {
             <form onSubmit={handleAddListing}>
               <input
                 type="text"
-                placeholder="Title"
+                placeholder="Title (e.g., Cozy Room)"
                 value={newListing.title}
                 onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
                 className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <select
+                value={newListing.type}
+                onChange={(e) => setNewListing({ ...newListing, type: e.target.value })}
+                className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="PG">PG</option>
+                <option value="Room">Room</option>
+                <option value="Hostel">Hostel</option>
+              </select>
               <input
                 type="number"
-                placeholder="Rent"
+                placeholder="Rent (e.g., 7000)"
                 value={newListing.rent}
                 onChange={(e) => setNewListing({ ...newListing, rent: e.target.value })}
                 className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="text"
-                placeholder="Location"
+                placeholder="Location (e.g., Delhi)"
                 value={newListing.location}
                 onChange={(e) => setNewListing({ ...newListing, location: e.target.value })}
                 className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="text"
-                placeholder="Facilities (comma-separated)"
+                placeholder="Facilities (e.g., WiFi, Food)"
                 value={newListing.facilities}
                 onChange={(e) => setNewListing({ ...newListing, facilities: e.target.value })}
+                className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Photo URLs (comma-separated)"
+                value={newListing.photos}
+                onChange={(e) => setNewListing({ ...newListing, photos: e.target.value })}
+                className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Contact Number (e.g., 9876543210)"
+                value={newListing.contact}
+                onChange={(e) => setNewListing({ ...newListing, contact: e.target.value })}
                 className="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
@@ -572,8 +713,10 @@ function OwnerDashboard() {
             {dummyOwnerListings.map((listing) => (
               <div key={listing._id} className="bg-white p-6 rounded-lg shadow-lg mb-4">
                 <h3 className="text-xl font-semibold">{listing.title}</h3>
+                <p className="text-gray-600">Type: {listing.type}</p>
                 <p className="text-gray-600">Tenants: {listing.tenants}</p>
                 <p className="text-gray-600">Revenue: ₹{listing.revenue}</p>
+                <p className="text-gray-600">Contact: {listing.contact}</p>
                 <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                   Chat with Tenants
                 </button>
@@ -602,7 +745,7 @@ function AppWrapper() {
             <Route path="*" element={<Home />} />
           </Routes>
           <footer className="bg-gray-800 text-white p-4 text-center">
-            <p>© 2025 PG Finder. All rights reserved.</p>
+            <p>© 2025 Stay Finder. All rights reserved.</p>
           </footer>
         </>
       ) : (
