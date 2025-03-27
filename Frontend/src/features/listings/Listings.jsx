@@ -4,8 +4,8 @@ import { useLocation } from "react-router-dom";
 import ListingCard from "../../components/ListingCard";
 import { motion } from "framer-motion";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import "leaflet/dist/leaflet.css"; // Ensure this is imported here or in main.jsx
-import { FaMapMarkerAlt, FaRupeeSign, FaUsers, FaHome, FaCalendarAlt, FaTimes, FaPhone, FaEnvelope, FaUser } from "react-icons/fa"; // Added FaUser
+import "leaflet/dist/leaflet.css";
+import { FaMapMarkerAlt, FaRupeeSign, FaUsers, FaHome, FaCalendarAlt, FaTimes, FaPhone, FaEnvelope, FaUser } from "react-icons/fa";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,7 +36,9 @@ function Listings() {
     const typeParam = params.get("type") || "";
 
     const filtered = listings.filter((listing) => {
-      const listingLocation = listing.location
+      const listingLocation = listing.locationString
+        ? listing.locationString.toLowerCase()
+        : listing.location && typeof listing.location === "string"
         ? listing.location.toLowerCase()
         : `${listing.city}, ${listing.locality}`.toLowerCase();
       const facilities = listing.facilities || listing.amenities || [];
@@ -60,12 +62,21 @@ function Listings() {
   };
 
   const handleCardClick = (listing) => {
-    console.log("Selected listing:", listing); // Debug log
+    console.log("Selected listing:", listing);
     setSelectedListing(listing);
   };
 
   const handleClose = () => {
     setSelectedListing(null);
+  };
+
+  const getLocationDisplay = (listing) => {
+    if (listing.locationString) return listing.locationString;
+    if (typeof listing.location === "string") return listing.location;
+    if (listing.location && typeof listing.location === "object" && listing.location.lat && listing.location.lng) {
+      return `Lat: ${listing.location.lat.toFixed(4)}, Lng: ${listing.location.lng.toFixed(4)}`;
+    }
+    return "Not specified";
   };
 
   return (
@@ -145,7 +156,7 @@ function Listings() {
                 )}
 
                 <p className="text-neutral-700 flex items-center gap-1">
-                  <FaMapMarkerAlt className="text-primary-500" /> Location: {selectedListing.location}
+                  <FaMapMarkerAlt className="text-primary-500" /> Location: {getLocationDisplay(selectedListing)}
                 </p>
                 <p className="text-neutral-700 flex items-center gap-1">
                   <FaRupeeSign className="text-primary-500" /> Rent: ₹{selectedListing.rent}/month
@@ -202,7 +213,7 @@ function Listings() {
                   </div>
                 )}
 
-                {selectedListing.location && typeof selectedListing.location !== "string" && (
+                {selectedListing.location && typeof selectedListing.location === "object" && selectedListing.location.lat && selectedListing.location.lng && (
                   <div className="mt-6">
                     <h3 className="text-lg font-semibold text-neutral-900 mb-2">Location on Map</h3>
                     <div className="w-full h-64 rounded-lg overflow-hidden border border-neutral-200">

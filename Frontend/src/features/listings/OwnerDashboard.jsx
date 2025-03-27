@@ -39,6 +39,15 @@ function OwnerDashboard() {
     { name: "Co-Living", icon: FaUsers, path: "/owner-dashboard/coliving" },
   ];
 
+  const getLocationDisplay = (listing) => {
+    if (listing.locationString) return listing.locationString;
+    if (typeof listing.location === "string") return listing.location;
+    if (listing.location && typeof listing.location === "object" && listing.location.lat && listing.location.lng) {
+      return `Lat: ${listing.location.lat.toFixed(4)}, Lng: ${listing.location.lng.toFixed(4)}`;
+    }
+    return "Not specified";
+  };
+
   const handleEdit = (listing) => {
     setEditingId(listing._id);
     setEditedData({ ...listing });
@@ -111,10 +120,10 @@ function OwnerDashboard() {
                     />
                     <input
                       type="text"
-                      value={editedData.location || ""}
-                      onChange={(e) => handleChange("location", e.target.value)}
+                      value={editedData.locationString || editedData.location || ""}
+                      onChange={(e) => handleChange("locationString", e.target.value)}
                       className="w-full p-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Location"
+                      placeholder="Location (e.g., Delhi, Karol Bagh)"
                     />
                     <input
                       type="number"
@@ -148,7 +157,7 @@ function OwnerDashboard() {
                 ) : (
                   <div>
                     <h3 className="text-xl font-semibold text-neutral-900">{listing.title}</h3>
-                    <p className="text-neutral-700">Location: {listing.location}</p>
+                    <p className="text-neutral-700">Location: {getLocationDisplay(listing)}</p>
                     <p className="text-neutral-700">Rent: ₹{listing.rent}/month</p>
                     <p className="text-neutral-700">Type: {listing.type}</p>
                     {listing.description && (

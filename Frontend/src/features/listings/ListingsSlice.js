@@ -5,7 +5,8 @@ const initialState = {
     {
       _id: "1",
       title: "Cozy PG in Mumbai",
-      location: "Mumbai",
+      location: { lat: 19.0760, lng: 72.8777 }, // Mumbai coordinates
+      locationString: "Mumbai",
       rent: 8000,
       facilities: ["WiFi", "Food"],
       type: "pg",
@@ -23,7 +24,8 @@ const initialState = {
     {
       _id: "3",
       title: "Entire House in Bangalore",
-      location: "Bangalore",
+      location: { lat: 12.9716, lng: 77.5946 }, // Bangalore coordinates
+      locationString: "Bangalore",
       rent: 15000,
       facilities: ["Parking", "WiFi"],
       type: "entireHouse",
@@ -41,7 +43,8 @@ const initialState = {
     {
       _id: "5",
       title: "CoLiving in Chennai",
-      location: "Chennai",
+      location: { lat: 13.0827, lng: 80.2707 }, // Chennai coordinates
+      locationString: "Chennai",
       rent: 7000,
       facilities: ["WiFi", "AC"],
       type: "coliving",

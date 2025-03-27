@@ -10,7 +10,6 @@ import "leaflet/dist/leaflet.css";
 import DatePicker from "react-date-picker";
 import "react-date-picker/dist/DatePicker.css";
 import "react-calendar/dist/Calendar.css";
-import L from "leaflet";
 
 const formVariants = {
   hidden: { opacity: 0, x: 20 },
@@ -32,7 +31,7 @@ const FlatmateForm = () => {
     address: "",
     landmark: "",
     zipCode: "",
-    location: null,
+    location: null, // Stores { lat, lng }
     deposit: "",
     rent: "",
     maintenance: "",
@@ -41,7 +40,7 @@ const FlatmateForm = () => {
     furnishingType: "Unfurnished",
     description: "",
     availableFrom: new Date(),
-    ownerName: "", // Added owner contact fields
+    ownerName: "",
     ownerPhone: "",
     ownerEmail: "",
     images: [],
@@ -57,7 +56,7 @@ const FlatmateForm = () => {
     { name: "basicDetails", label: "Enter Basic Details", type: "custom", required: true },
     { name: "amenities", label: "Amenities", type: "custom", required: true },
     { name: "titleDescription", label: "Add Title and Description", type: "custom", required: true },
-    { name: "ownerContact", label: "Owner Contact", type: "custom", required: true }, // Added owner contact step
+    { name: "ownerContact", label: "Owner Contact", type: "custom", required: true },
     { name: "uploadImages", label: "Upload Property Images", type: "custom", required: true },
   ];
 
@@ -82,12 +81,12 @@ const FlatmateForm = () => {
       setError("Deposit, rent, and maintenance are required.");
       return;
     }
-    if (step === 5 && (!formData.furnishingType)) {
+    if (step === 5 && !formData.furnishingType) {
       setError("Please select furnishing type.");
       return;
     }
-    if (step === 6 && (!formData.description)) {
-      setError("Description is required.");
+    if (step === 6 && (!formData.title || !formData.description)) {
+      setError("Title and description are required.");
       return;
     }
     if (step === 7 && (!formData.ownerName || !formData.ownerPhone || !formData.ownerEmail)) {
@@ -123,7 +122,8 @@ const FlatmateForm = () => {
     const newListing = {
       _id: Date.now().toString(),
       title: formData.title,
-      location: `${formData.city}, ${formData.locality}`,
+      location: formData.location, // Use the { lat, lng } object
+      locationString: `${formData.city}, ${formData.locality}`, // Separate field for display
       rent: parseInt(formData.rent),
       facilities: formData.amenities,
       type: "flatmate",
@@ -137,7 +137,7 @@ const FlatmateForm = () => {
       houseType: formData.houseType,
       furnishingType: formData.furnishingType,
       description: formData.description,
-      ownerContact: { // Added owner contact object
+      ownerContact: {
         name: formData.ownerName,
         phone: formData.ownerPhone,
         email: formData.ownerEmail,
@@ -147,7 +147,7 @@ const FlatmateForm = () => {
     console.log("Dispatching flatmate listing:", newListing);
     dispatch(addListing(newListing));
     setSuccess("Flatmate listing added successfully!");
-    setTimeout(() => navigate("/owner-dashboard"), 2000); // Redirect to owner dashboard
+    setTimeout(() => navigate("/owner-dashboard"), 2000);
   };
 
   const handleChange = (name, value) => {
