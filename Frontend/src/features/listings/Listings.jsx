@@ -26,6 +26,8 @@ function Listings() {
   const listings = useSelector((state) => state.listings.listings);
   const [filteredListings, setFilteredListings] = useState([]);
   const [selectedListing, setSelectedListing] = useState(null);
+  const [mainImage, setMainImage] = useState(null); // Changed from "" to null
+
   const location = useLocation();
 
   useEffect(() => {
@@ -54,6 +56,18 @@ function Listings() {
     console.log("Filtered listings:", filtered);
   }, [location.search, listings]);
 
+  useEffect(() => {
+    if (selectedListing) {
+      const images = selectedListing.images && selectedListing.images.length > 0
+        ? selectedListing.images
+        : selectedListing.image
+        ? [selectedListing.image]
+        : [];
+      setMainImage(images[0] || "https://via.placeholder.com/600x400?text=No+Image+Available");
+      console.log("Selected listing data:", selectedListing);
+    }
+  }, [selectedListing]);
+
   const getTypeTitle = () => {
     const params = new URLSearchParams(location.search);
     const type = params.get("type");
@@ -68,6 +82,7 @@ function Listings() {
 
   const handleClose = () => {
     setSelectedListing(null);
+    setMainImage(null); // Changed from "" to null
   };
 
   const getLocationDisplay = (listing) => {
@@ -77,6 +92,18 @@ function Listings() {
       return `Lat: ${listing.location.lat.toFixed(4)}, Lng: ${listing.location.lng.toFixed(4)}`;
     }
     return "Not specified";
+  };
+
+  const handleThumbnailClick = (image) => {
+    setMainImage(image);
+  };
+
+  const getMapLocation = (listing) => {
+    return listing.location && typeof listing.location === "object" && listing.location.lat && listing.location.lng
+      ? listing.location
+      : listing.mapLocation && typeof listing.mapLocation === "object" && listing.mapLocation.lat && listing.mapLocation.lng
+      ? listing.mapLocation
+      : null;
   };
 
   return (
@@ -142,18 +169,52 @@ function Listings() {
               </div>
 
               <div className="space-y-6">
-                {selectedListing.images && selectedListing.images.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {selectedListing.images.map((img, idx) => (
-                      <img
-                        key={idx}
-                        src={img}
-                        alt={`Image ${idx}`}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                )}
+                {/* Professional Image Viewer */}
+                <div className="w-full">
+                  {mainImage && ( // Only render img if mainImage is truthy
+                    <motion.img
+                      key={mainImage}
+                      src={mainImage}
+                      alt={selectedListing.title}
+                      className="w-full h-80 object-cover rounded-lg shadow-md"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                  {(selectedListing.images && selectedListing.images.length > 0) || selectedListing.image ? (
+                    <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
+                      {selectedListing.images && selectedListing.images.length > 0
+                        ? selectedListing.images.map((img, idx) => (
+                            <motion.img
+                              key={idx}
+                              src={img}
+                              alt={`Thumbnail ${idx}`}
+                              className={`w-20 h-20 object-cover rounded-md cursor-pointer border-2 ${
+                                mainImage === img ? "border-primary-500" : "border-neutral-200"
+                              }`}
+                              onClick={() => handleThumbnailClick(img)}
+                              whileHover={{ scale: 1.05 }}
+                              transition={{ duration: 0.2 }}
+                            />
+                          ))
+                        : (
+                            <motion.img
+                              src={selectedListing.image}
+                              alt="Thumbnail"
+                              className={`w-20 h-20 object-cover rounded-md cursor-pointer border-2 ${
+                                mainImage === selectedListing.image ? "border-primary-500" : "border-neutral-200"
+                              }`}
+                              onClick={() => handleThumbnailClick(selectedListing.image)}
+                              whileHover={{ scale: 1.05 }}
+                              transition={{ duration: 0.2 }}
+                            />
+                          )}
+                    </div>
+                  ) : (
+                    <p className="text-neutral-700 mt-4">No images available</p>
+                  )}
+                </div>
 
                 <p className="text-neutral-700 flex items-center gap-1">
                   <FaMapMarkerAlt className="text-primary-500" /> Location: {getLocationDisplay(selectedListing)}
@@ -192,6 +253,16 @@ function Listings() {
                   </p>
                 )}
 
+                {selectedListing.meals && (
+                  <p className="text-neutral-700">Meals Included: {selectedListing.meals}</p>
+                )}
+                {selectedListing.curfew && (
+                  <p className="text-neutral-700">Curfew: {selectedListing.curfew}</p>
+                )}
+                {selectedListing.occupancy && (
+                  <p className="text-neutral-700">Occupancy: {selectedListing.occupancy}</p>
+                )}
+
                 {selectedListing.availableFrom && (
                   <p className="text-neutral-700 flex items-center gap-1">
                     <FaCalendarAlt className="text-primary-500" /> Available From: {new Date(selectedListing.availableFrom).toLocaleDateString()}
@@ -213,12 +284,12 @@ function Listings() {
                   </div>
                 )}
 
-                {selectedListing.location && typeof selectedListing.location === "object" && selectedListing.location.lat && selectedListing.location.lng && (
+                {getMapLocation(selectedListing) && (
                   <div className="mt-6">
                     <h3 className="text-lg font-semibold text-neutral-900 mb-2">Location on Map</h3>
                     <div className="w-full h-64 rounded-lg overflow-hidden border border-neutral-200">
                       <MapContainer
-                        center={[selectedListing.location.lat, selectedListing.location.lng]}
+                        center={[getMapLocation(selectedListing).lat, getMapLocation(selectedListing).lng]}
                         zoom={13}
                         style={{ height: "100%", width: "100%" }}
                       >
@@ -226,7 +297,7 @@ function Listings() {
                           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         />
-                        <Marker position={[selectedListing.location.lat, selectedListing.location.lng]} />
+                        <Marker position={[getMapLocation(selectedListing).lat, getMapLocation(selectedListing).lng]} />
                       </MapContainer>
                     </div>
                   </div>

@@ -122,12 +122,13 @@ const FlatmateForm = () => {
     const newListing = {
       _id: Date.now().toString(),
       title: formData.title,
-      location: formData.location, // Use the { lat, lng } object
-      locationString: `${formData.city}, ${formData.locality}`, // Separate field for display
+      location: formData.location, // { lat, lng }
+      locationString: `${formData.city}, ${formData.locality}`,
       rent: parseInt(formData.rent),
       facilities: formData.amenities,
       type: "flatmate",
-      image: formData.images[0],
+      image: formData.images[0], // First image for preview
+      images: formData.images, // Full array for detailed view
       numFlatmates: parseInt(formData.numFlatmates),
       deposit: parseInt(formData.deposit),
       maintenance: parseInt(formData.maintenance),

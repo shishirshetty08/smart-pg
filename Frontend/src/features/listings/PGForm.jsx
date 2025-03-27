@@ -21,7 +21,7 @@ const PGForm = () => {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     title: "",
-    location: "",
+    location: "", // String for display
     rent: "",
     facilities: [],
     meals: "No",
@@ -30,7 +30,7 @@ const PGForm = () => {
     images: [],
     description: "",
     availableFrom: new Date(),
-    mapLocation: null,
+    mapLocation: null, // { lat, lng }
     ownerName: "",
     ownerPhone: "",
     ownerEmail: "",
@@ -88,12 +88,13 @@ const PGForm = () => {
     const newListing = {
       _id: Date.now().toString(),
       title: formData.title,
-      location: formData.location,
+      location: formData.mapLocation, // Use { lat, lng } from map
+      locationString: formData.location, // String for display
       rent: parseInt(formData.rent),
       facilities: formData.facilities,
       type: "pg",
-      image: formData.images[0], // Use first image as primary
-      images: formData.images, // Store all images
+      image: formData.images[0], // First image for preview
+      images: formData.images, // Full array for detailed view
       description: formData.description,
       availableFrom: formData.availableFrom.toISOString(),
       meals: formData.meals,
@@ -109,7 +110,7 @@ const PGForm = () => {
     console.log("Dispatching PG listing:", newListing);
     dispatch(addListing(newListing));
     setSuccess("PG listing added successfully!");
-    setTimeout(() => navigate("/owner-dashboard"), 2000); // Navigate to dashboard
+    setTimeout(() => navigate("/owner-dashboard"), 2000);
   };
 
   const handleChange = (name, value) => {
