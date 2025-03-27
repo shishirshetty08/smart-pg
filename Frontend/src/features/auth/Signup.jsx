@@ -1,3 +1,4 @@
+// src/features/auth/Signup.jsx (unchanged)
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
@@ -13,7 +14,7 @@ function Signup() {
   const { users, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (user) navigate("/");
+    if (user) navigate("/listings");
   }, [user, navigate]);
 
   const handleSignup = (e) => {
@@ -28,7 +29,7 @@ function Signup() {
     }
     dispatch(signup({ email, password, role }));
     dispatch(login({ user: email, role }));
-    navigate("/");
+    navigate("/listings");
   };
 
   const handleGoogleSignup = () => {
@@ -40,61 +41,63 @@ function Signup() {
     }
     dispatch(signup({ email: googleEmail, password: "google-auth", role: googleRole }));
     dispatch(login({ user: googleEmail, role: googleRole }));
-    navigate("/");
+    navigate("/listings");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">Welcome to Stay Finder</h2>
-        <p className="text-center text-gray-600 mb-6">Sign up to find or list stays</p>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSignup}>
-          <div className="mb-4">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="user">User (Tenant)</option>
-              <option value="owner">Owner</option>
-            </select>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50 py-12">
+      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h2 className="text-3xl font-bold text-neutral-900 mb-6 text-center">
+          Sign Up to Stay Finder
+        </h2>
+        {error && (
+          <p className="text-red-500 bg-red-50 p-2 rounded mb-4 text-center">
+            {error}
+          </p>
+        )}
+        <form onSubmit={handleSignup} className="space-y-6">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
+            required
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
+          >
+            <option value="user">User (Tenant)</option>
+            <option value="owner">Owner</option>
+          </select>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mb-4"
+            className="w-full bg-primary-500 text-white p-3 rounded-lg hover:bg-primary-600 transition-all duration-300 font-semibold transform hover:-translate-y-1 shadow-md"
           >
             Sign Up
           </button>
         </form>
         <button
           onClick={handleGoogleSignup}
-          className="w-full bg-gray-200 text-gray-800 p-2 rounded hover:bg-gray-300 flex items-center justify-center"
+          className="w-full mt-4 bg-white text-neutral-900 p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 transition-all duration-300 flex items-center justify-center shadow-md transform hover:-translate-y-1"
         >
-          <span className="mr-2">G</span> Sign Up with Google
+          <span className="mr-2 text-red-500 font-bold">G</span> Sign Up with Google
         </button>
-        <p className="text-center text-gray-600 mt-4">
-          Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
+        <p className="text-center text-neutral-700 mt-4">
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary-500 hover:underline font-medium">
+            Login
+          </Link>
         </p>
       </div>
     </div>

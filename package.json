@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.6.1",
+    "framer-motion": "^12.6.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.4.0"
+  }
+}
