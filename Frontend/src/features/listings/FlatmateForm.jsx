@@ -1,9 +1,8 @@
-// src/features/listings/FlatmateForm.jsx
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { addListing } from "../../store";
-import { FaArrowLeft, FaArrowRight, FaCheck, FaMale, FaFemale, FaUsers, FaHome, FaMapMarkerAlt, FaRupeeSign, FaFan, FaSnowflake, FaTv, FaCouch, FaCalendarAlt, FaCamera } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheck, FaMale, FaFemale, FaUsers, FaHome, FaMapMarkerAlt, FaRupeeSign, FaFan, FaSnowflake, FaTv, FaCouch, FaCalendarAlt, FaCamera, FaUser, FaPhone, FaEnvelope } from "react-icons/fa";
 import { GiWashingMachine } from "react-icons/gi";
 import { motion } from "framer-motion";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
@@ -12,6 +11,7 @@ import DatePicker from "react-date-picker";
 import "react-date-picker/dist/DatePicker.css";
 import "react-calendar/dist/Calendar.css";
 import L from "leaflet";
+
 const formVariants = {
   hidden: { opacity: 0, x: 20 },
   visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
@@ -40,7 +40,10 @@ const FlatmateForm = () => {
     amenities: [],
     furnishingType: "Unfurnished",
     description: "",
-    availableFrom: new Date(), // Initial value as Date
+    availableFrom: new Date(),
+    ownerName: "", // Added owner contact fields
+    ownerPhone: "",
+    ownerEmail: "",
     images: [],
   });
   const [error, setError] = useState("");
@@ -54,6 +57,7 @@ const FlatmateForm = () => {
     { name: "basicDetails", label: "Enter Basic Details", type: "custom", required: true },
     { name: "amenities", label: "Amenities", type: "custom", required: true },
     { name: "titleDescription", label: "Add Title and Description", type: "custom", required: true },
+    { name: "ownerContact", label: "Owner Contact", type: "custom", required: true }, // Added owner contact step
     { name: "uploadImages", label: "Upload Property Images", type: "custom", required: true },
   ];
 
@@ -86,7 +90,11 @@ const FlatmateForm = () => {
       setError("Description is required.");
       return;
     }
-    if (step === 7 && formData.images.length === 0) {
+    if (step === 7 && (!formData.ownerName || !formData.ownerPhone || !formData.ownerEmail)) {
+      setError("Owner name, phone, and email are required.");
+      return;
+    }
+    if (step === 8 && formData.images.length === 0) {
       setError("Please upload at least one image.");
       return;
     }
@@ -100,7 +108,11 @@ const FlatmateForm = () => {
   };
 
   const handleSubmit = () => {
-    const requiredFields = ["title", "gender", "numFlatmates", "houseModel", "houseType", "city", "locality", "address", "location", "deposit", "rent", "maintenance", "furnishingType", "description", "images"];
+    const requiredFields = [
+      "title", "gender", "numFlatmates", "houseModel", "houseType", "city", "locality", "address",
+      "location", "deposit", "rent", "maintenance", "furnishingType", "description",
+      "ownerName", "ownerPhone", "ownerEmail", "images"
+    ];
     const missingFields = requiredFields.filter((field) => !formData[field] || (Array.isArray(formData[field]) && formData[field].length === 0));
     if (missingFields.length > 0) {
       setError("Please fill all required fields.");
@@ -110,19 +122,32 @@ const FlatmateForm = () => {
 
     const newListing = {
       _id: Date.now().toString(),
-      ...formData,
+      title: formData.title,
+      location: `${formData.city}, ${formData.locality}`,
+      rent: parseInt(formData.rent),
+      facilities: formData.amenities,
       type: "flatmate",
+      image: formData.images[0],
       numFlatmates: parseInt(formData.numFlatmates),
       deposit: parseInt(formData.deposit),
-      rent: parseInt(formData.rent),
       maintenance: parseInt(formData.maintenance),
-      availableFrom: formData.availableFrom.toISOString(), // Convert Date to ISO string
+      availableFrom: formData.availableFrom.toISOString(),
+      gender: formData.gender,
+      houseModel: formData.houseModel,
+      houseType: formData.houseType,
+      furnishingType: formData.furnishingType,
+      description: formData.description,
+      ownerContact: { // Added owner contact object
+        name: formData.ownerName,
+        phone: formData.ownerPhone,
+        email: formData.ownerEmail,
+      },
     };
 
-    console.log("Dispatching listing:", newListing);
+    console.log("Dispatching flatmate listing:", newListing);
     dispatch(addListing(newListing));
     setSuccess("Flatmate listing added successfully!");
-    setTimeout(() => navigate("/listings?type=flatmate"), 2000);
+    setTimeout(() => navigate("/owner-dashboard"), 2000); // Redirect to owner dashboard
   };
 
   const handleChange = (name, value) => {
@@ -519,6 +544,50 @@ const FlatmateForm = () => {
                 calendarClassName="border border-neutral-200 rounded-lg shadow-lg"
                 clearIcon={null}
                 format="dd/MM/yyyy"
+              />
+            </div>
+          </div>
+        );
+      } else if (field.name === "ownerContact") {
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
+                <FaUser className="text-primary-500" /> Owner Name *
+              </label>
+              <input
+                type="text"
+                value={formData.ownerName}
+                onChange={(e) => handleChange("ownerName", e.target.value)}
+                placeholder="e.g., John Doe"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
+                <FaPhone className="text-primary-500" /> Owner Phone *
+              </label>
+              <input
+                type="tel"
+                value={formData.ownerPhone}
+                onChange={(e) => handleChange("ownerPhone", e.target.value)}
+                placeholder="e.g., +91 9876543210"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
+                <FaEnvelope className="text-primary-500" /> Owner Email *
+              </label>
+              <input
+                type="email"
+                value={formData.ownerEmail}
+                onChange={(e) => handleChange("ownerEmail", e.target.value)}
+                placeholder="e.g., john.doe@example.com"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                required
               />
             </div>
           </div>

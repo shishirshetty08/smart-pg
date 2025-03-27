@@ -1,4 +1,3 @@
-// src/components/StepForm.jsx
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -51,14 +50,15 @@ function StepForm({ type, fields }) {
       type: type.toLowerCase(),
       rent: parseInt(formData.rent || 0),
       image: formData.image || "https://via.placeholder.com/300x200",
+      facilities: formData.facilities || [], // Ensure facilities is always an array
     };
 
+    console.log("Dispatching roommate listing:", newListing);
     dispatch(addListing(newListing));
     setSuccess(`${type} listing added successfully!`);
-    setTimeout(() => navigate("/owner-dashboard"), 2000);
+    setTimeout(() => navigate(`/listings?type=${type.toLowerCase()}`), 2000); // Navigate to listings
   };
 
-  // Inline rendering to avoid function call ambiguity
   const currentField = fields[step];
   let fieldComponent;
   if (!currentField) {
@@ -144,7 +144,6 @@ function StepForm({ type, fields }) {
           <div className="space-y-6">
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                {/* Remove dynamic icon to simplify */}
                 {currentField?.label} {currentField?.required && "*"}
               </label>
               {fieldComponent}

@@ -1,4 +1,3 @@
-// src/features/listings/RoommateForm.jsx
 import StepForm from "../../components/StepForm";
 import { FaHome, FaMoneyBillAlt, FaList, FaUsers, FaImage } from "react-icons/fa";
 
@@ -14,7 +13,7 @@ const fields = [
 ];
 
 function RoommateForm() {
-  return <StepForm type="Roommate" fields={fields} />;
+  return <StepForm type="roommate" fields={fields} />;
 }
 
 export default RoommateForm;

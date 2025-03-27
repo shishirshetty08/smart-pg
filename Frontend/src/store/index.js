@@ -1,6 +1,5 @@
-// src/store/index.js
 import { configureStore } from "@reduxjs/toolkit";
-import listingsReducer, { addListing } from "../features/listings/ListingsSlice"; // Import addListing
+import listingsReducer, { addListing, updateListing, deleteListing } from "../features/listings/ListingsSlice";
 import authReducer, { login, logout, signup } from "./authSlice";
 
 export const store = configureStore({
@@ -11,4 +10,4 @@ export const store = configureStore({
 });
 
 // Export actions for use in components
-export { login, logout, signup, addListing };
+export { login, logout, signup, addListing, updateListing, deleteListing };

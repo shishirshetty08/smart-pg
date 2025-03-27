@@ -1,4 +1,3 @@
-// src/features/listings/ListingsSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
@@ -67,8 +66,18 @@ const listingsSlice = createSlice({
     addListing: (state, action) => {
       state.listings.push(action.payload);
     },
+    updateListing: (state, action) => {
+      const { id, updatedListing } = action.payload;
+      const index = state.listings.findIndex((listing) => listing._id === id);
+      if (index !== -1) {
+        state.listings[index] = { ...state.listings[index], ...updatedListing };
+      }
+    },
+    deleteListing: (state, action) => {
+      state.listings = state.listings.filter((listing) => listing._id !== action.payload);
+    },
   },
 });
 
-export const { addListing } = listingsSlice.actions;
-export default listingsSlice.reducer; // Fix: Export the reducer
+export const { addListing, updateListing, deleteListing } = listingsSlice.actions;
+export default listingsSlice.reducer;
