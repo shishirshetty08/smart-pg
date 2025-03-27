@@ -1,7 +1,6 @@
-// src/components/ListingCard.jsx
 import { FaMapMarkerAlt, FaMoneyBillAlt } from "react-icons/fa";
 
-function ListingCard({ listing }) {
+function ListingCard({ listing, onClick }) {
   // Handle location: use string if present, otherwise combine city and locality
   const locationString = listing.location || `${listing.city}, ${listing.locality}`;
   // Handle image: use image if present, otherwise first from images array or fallback
@@ -10,7 +9,10 @@ function ListingCard({ listing }) {
   const facilities = listing.facilities || listing.amenities || [];
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+    <div
+      className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+      onClick={onClick} // Trigger detailed view on click
+    >
       <img
         src={imageSrc}
         alt={listing.title}
