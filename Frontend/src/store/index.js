@@ -1,14 +1,14 @@
 // src/store/index.js
 import { configureStore } from "@reduxjs/toolkit";
-import authSlice from "../features/auth/AuthSlice";
-import listingsSlice from "../features/listings/ListingsSlice";
+import listingsReducer, { addListing } from "../features/listings/ListingsSlice"; // Import addListing
+import authReducer, { login, logout, signup } from "./authSlice";
 
 export const store = configureStore({
   reducer: {
-    auth: authSlice.reducer,
-    listings: listingsSlice.reducer,
+    listings: listingsReducer,
+    auth: authReducer,
   },
 });
 
-export const { signup, login, logout } = authSlice.actions;
-export const { addListing } = listingsSlice.actions;
+// Export actions for use in components
+export { login, logout, signup, addListing };

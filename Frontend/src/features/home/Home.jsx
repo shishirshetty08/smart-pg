@@ -3,9 +3,18 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { signup, login } from "../../store";
-import { FaHome, FaList, FaTasks, FaTimes, FaSearch, FaUser, FaBuilding } from "react-icons/fa";
+import { FaHome, FaList, FaTasks, FaTimes, FaSearch, FaUser, FaBuilding, FaUsers, FaBed, FaHouseUser } from "react-icons/fa";
 import { motion } from "framer-motion";
 import SearchBar from "../../components/SearchBar";
+
+const listingImages = {
+  roommate: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+  coliving: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+  pg: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+  flatmate: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+  room: "https://images.unsplash.com/photo-1578683015128-52085e87ad47?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+  entireHouse: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+};
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 50 },
@@ -23,7 +32,7 @@ const itemVariants = {
 };
 
 function Home() {
-  const { role, user, users } = useSelector((state) => state.auth);
+  const { role, user } = useSelector((state) => state.auth); // Remove users
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -32,7 +41,7 @@ function Home() {
   const [password, setPassword] = useState("");
   const [signupRole, setSignupRole] = useState("user");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("users"); // Toggle state for Users/Owners
+  const [activeTab, setActiveTab] = useState("users");
 
   const handleBrowseListings = () => {
     if (!user) setIsAuthModalOpen(true);
@@ -41,14 +50,17 @@ function Home() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const foundUser = users.find((u) => u.email === email && u.password === password);
-    if (!foundUser) {
-      setError("Invalid email or password.");
+    if (!email || !password) {
+      setError("All fields are required.");
       return;
     }
-    dispatch(login({ user: email, role: foundUser.role }));
-    setIsAuthModalOpen(false);
-    navigate("/listings");
+    dispatch(login({ email, password }));
+    if (user) { // Check if login succeeded (user is set)
+      setIsAuthModalOpen(false);
+      navigate("/listings");
+    } else {
+      setError("Invalid email or password.");
+    }
   };
 
   const handleSignup = (e) => {
@@ -57,27 +69,29 @@ function Home() {
       setError("All fields are required.");
       return;
     }
-    if (users.some((u) => u.email === email)) {
-      setError("Email already registered.");
-      return;
-    }
     dispatch(signup({ email, password, role: signupRole }));
-    dispatch(login({ user: email, role: signupRole }));
-    setIsAuthModalOpen(false);
-    navigate("/listings");
+    if (user) { // Check if signup succeeded (user is set)
+      setIsAuthModalOpen(false);
+      navigate("/listings");
+    } else {
+      setError("Email already registered.");
+    }
   };
 
   const handleGoogleSignup = () => {
     const googleEmail = `googleuser${Date.now()}@example.com`;
     const googleRole = signupRole;
-    if (users.some((u) => u.email === googleEmail)) {
-      setError("Google account already registered.");
-      return;
-    }
     dispatch(signup({ email: googleEmail, password: "google-auth", role: googleRole }));
-    dispatch(login({ user: googleEmail, role: googleRole }));
-    setIsAuthModalOpen(false);
-    navigate("/listings");
+    if (user) { // Check if signup succeeded
+      setIsAuthModalOpen(false);
+      navigate("/listings");
+    } else {
+      setError("Google account registration failed.");
+    }
+  };
+
+  const handleCategoryClick = (category) => {
+    navigate(`/listings?type=${category}`);
   };
 
   return (
@@ -116,6 +130,56 @@ function Home() {
         </div>
       </motion.section>
 
+      {/* Explore Listings Section */}
+      <motion.section
+        initial="hidden"
+        animate="visible"
+        variants={sectionVariants}
+        className="py-16 bg-white"
+      >
+        <div className="container mx-auto px-4 flex flex-col md:flex-row gap-12">
+          {/* Left Side: Heading and Description */}
+          <div className="md:w-1/3">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+              Explore The Latest Stay Finder Listings
+            </h2>
+            <p className="text-neutral-700 text-lg">
+              Discover a variety of living options tailored to your needs, from shared spaces to entire homes.
+            </p>
+          </div>
+
+          {/* Right Side: Category Grid */}
+          <div className="md:w-2/3 grid grid-cols-2 md:grid-cols-3 gap-6">
+            {[
+              { name: "Roommate", icon: FaUsers, image: listingImages.roommate, type: "roommate" },
+              { name: "CoLiving", icon: FaUsers, image: listingImages.coliving, type: "coliving" },
+              { name: "PG", icon: FaBed, image: listingImages.pg, type: "pg" },
+              { name: "Flatmate", icon: FaUsers, image: listingImages.flatmate, type: "flatmate" },
+              { name: "Room", icon: FaBed, image: listingImages.room, type: "room" },
+              { name: "Entire House", icon: FaHouseUser, image: listingImages.entireHouse, type: "entireHouse" },
+            ].map((category) => (
+              <motion.div
+                key={category.type}
+                variants={itemVariants}
+                whileHover={{ scale: 1.05 }}
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-all duration-300"
+                onClick={() => handleCategoryClick(category.type)}
+              >
+                <img
+                  src={category.image}
+                  alt={category.name}
+                  className="w-full h-32 object-cover"
+                />
+                <div className="p-4 flex items-center gap-2">
+                  <category.icon className="text-primary-500" size={20} />
+                  <h3 className="text-neutral-900 font-semibold">{category.name}</h3>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
       {/* How It Works Section */}
       <motion.section
         initial="hidden"
@@ -127,8 +191,6 @@ function Home() {
           <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 text-center mb-12">
             How It Works
           </h2>
-
-          {/* Toggle Buttons */}
           <div className="flex justify-center gap-4 mb-12">
             <button
               onClick={() => setActiveTab("users")}
@@ -151,10 +213,8 @@ function Home() {
               For Owners
             </button>
           </div>
-
-          {/* Content */}
           <motion.div
-            key={activeTab} // Key ensures animation triggers on tab change
+            key={activeTab}
             initial="hidden"
             animate="visible"
             variants={cardVariants}
@@ -304,13 +364,12 @@ function Home() {
             )}
             <p className="text-center text-neutral-700 mt-4">
               {isLogin ? "Need an account?" : "Already have an account?"}{" "}
-              <Link
-                to={isLogin ? "/signup" : "/login"}
+              <button
+                onClick={() => setIsLogin(!isLogin)}
                 className="text-primary-500 hover:underline font-medium"
-                onClick={() => setIsAuthModalOpen(false)}
               >
                 {isLogin ? "Sign Up" : "Login"}
-              </Link>
+              </button>
             </p>
           </motion.div>
         </div>
