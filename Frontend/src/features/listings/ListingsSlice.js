@@ -1,71 +1,17 @@
 import { createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
 
 const initialState = {
-  listings: [
-    {
-      _id: "1",
-      title: "Cozy PG in Mumbai",
-      location: { lat: 19.0760, lng: 72.8777 }, // Mumbai coordinates
-      locationString: "Mumbai",
-      rent: 8000,
-      facilities: ["WiFi", "Food"],
-      type: "pg",
-      image: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-    },
-    {
-      _id: "2",
-      title: "Shared Room in Delhi",
-      location: "Delhi",
-      rent: 5000,
-      facilities: ["AC"],
-      type: "room",
-      image: "https://images.unsplash.com/photo-1578683015128-52085e87ad47?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-    },
-    {
-      _id: "3",
-      title: "Entire House in Bangalore",
-      location: { lat: 12.9716, lng: 77.5946 }, // Bangalore coordinates
-      locationString: "Bangalore",
-      rent: 15000,
-      facilities: ["Parking", "WiFi"],
-      type: "entireHouse",
-      image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-    },
-    {
-      _id: "4",
-      title: "Roommate Space in Pune",
-      location: "Pune",
-      rent: 6000,
-      facilities: ["Food"],
-      type: "roommate",
-      image: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-    },
-    {
-      _id: "5",
-      title: "CoLiving in Chennai",
-      location: { lat: 13.0827, lng: 80.2707 }, // Chennai coordinates
-      locationString: "Chennai",
-      rent: 7000,
-      facilities: ["WiFi", "AC"],
-      type: "coliving",
-      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-    },
-    {
-      _id: "6",
-      title: "Flatmate in Hyderabad",
-      location: "Hyderabad",
-      rent: 6500,
-      facilities: ["Parking"],
-      type: "flatmate",
-      image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-    },
-  ],
+  listings: [],
 };
 
 const listingsSlice = createSlice({
   name: "listings",
   initialState,
   reducers: {
+    setListings: (state, action) => {
+      state.listings = action.payload;
+    },
     addListing: (state, action) => {
       state.listings.push(action.payload);
     },
@@ -82,5 +28,50 @@ const listingsSlice = createSlice({
   },
 });
 
-export const { addListing, updateListing, deleteListing } = listingsSlice.actions;
+export const { setListings, addListing, updateListing, deleteListing } = listingsSlice.actions;
+
+// Thunks for API calls
+export const fetchListings = () => async (dispatch) => {
+  try {
+    const response = await axios.get("http://localhost:5000/api/listings");
+    dispatch(setListings(response.data));
+  } catch (error) {
+    console.error("Error fetching listings:", error);
+  }
+};
+
+export const createListing = (listingData) => async (dispatch) => {
+  try {
+    const response = await axios.post("http://localhost:5000/api/listings", listingData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    dispatch(addListing(response.data));
+  } catch (error) {
+    console.error("Error creating listing:", error);
+    throw error;
+  }
+};
+
+export const updateListingThunk = (id, updatedListing) => async (dispatch) => {
+  try {
+    const response = await axios.put(`http://localhost:5000/api/listings/${id}`, updatedListing, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    dispatch(updateListing({ id, updatedListing: response.data }));
+  } catch (error) {
+    console.error("Error updating listing:", error);
+    throw error;
+  }
+};
+
+export const deleteListingThunk = (id) => async (dispatch) => {
+  try {
+    await axios.delete(`http://localhost:5000/api/listings/${id}`);
+    dispatch(deleteListing(id));
+  } catch (error) {
+    console.error("Error deleting listing:", error);
+    throw error;
+  }
+};
+
 export default listingsSlice.reducer;

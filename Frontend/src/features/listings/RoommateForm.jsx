@@ -1,19 +1,18 @@
 import StepForm from "../../components/StepForm";
-import { FaHome, FaMoneyBillAlt, FaList, FaUsers, FaImage } from "react-icons/fa";
 
-const fields = [
-  { name: "title", label: "Title", type: "text", placeholder: "e.g., Cozy Roommate in Mumbai", required: true, icon: FaHome },
-  { name: "location", label: "Location", type: "text", placeholder: "e.g., Mumbai", required: true, icon: FaHome },
-  { name: "rent", label: "Rent (₹/month)", type: "number", placeholder: "e.g., 6000", required: true, icon: FaMoneyBillAlt },
-  { name: "facilities", label: "Facilities", type: "checkbox", options: ["WiFi", "Food", "AC", "Parking"], icon: FaList },
-  { name: "numRoommates", label: "Number of Roommates", type: "number", placeholder: "e.g., 3", required: true, icon: FaUsers },
-  { name: "smoking", label: "Smoking Allowed", type: "select", options: ["No", "Yes"], required: true },
-  { name: "pets", label: "Pet Friendly", type: "select", options: ["No", "Yes"], required: true },
-  { name: "image", label: "Image URL", type: "text", placeholder: "e.g., https://example.com/image.jpg", icon: FaImage },
-];
+const RoommateForm = () => {
+  const fields = [
+    { name: "title", label: "Title", type: "text", placeholder: "e.g., Roommate Needed in Mumbai", required: true },
+    { name: "location", label: "Location", type: "text", placeholder: "e.g., Mumbai", required: true },
+    { name: "rent", label: "Rent (₹/month)", type: "number", placeholder: "e.g., 5000", required: true },
+    { name: "numRoommates", label: "Number of Roommates", type: "number", placeholder: "e.g., 2", required: true },
+    { name: "smoking", label: "Smoking Allowed", type: "select", options: ["Yes", "No"], required: true },
+    { name: "pets", label: "Pets Allowed", type: "select", options: ["Yes", "No"], required: true },
+    { name: "description", label: "Description", type: "text", placeholder: "e.g., Looking for a tidy roommate...", required: true },
+    { name: "images", label: "Upload Images", type: "file", required: true },
+  ];
 
-function RoommateForm() {
-  return <StepForm type="roommate" fields={fields} />;
-}
+  return <StepForm type="Roommate" fields={fields} />;
+};
 
 export default RoommateForm;

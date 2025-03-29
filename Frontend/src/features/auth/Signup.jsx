@@ -1,8 +1,7 @@
-// src/features/auth/Signup.jsx (unchanged)
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { signup, login } from "../../store";
+import { signup } from "../../store";
 
 function Signup() {
   const dispatch = useDispatch();
@@ -11,37 +10,37 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user");
   const [error, setError] = useState("");
-  const { users, user } = useSelector((state) => state.auth);
+  const { user, error: reduxError } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (user) navigate("/listings");
   }, [user, navigate]);
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setError("All fields are required.");
       return;
     }
-    if (users.some((u) => u.email === email)) {
-      setError("Email already registered.");
-      return;
+
+    try {
+      await dispatch(signup({ email, password, role })).unwrap();
+      navigate("/login");
+    } catch (err) {
+      setError(reduxError || "Signup failed. Please try again.");
     }
-    dispatch(signup({ email, password, role }));
-    dispatch(login({ user: email, role }));
-    navigate("/listings");
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     const googleEmail = `googleuser${Date.now()}@example.com`;
     const googleRole = role;
-    if (users.some((u) => u.email === googleEmail)) {
-      setError("Google account already registered.");
-      return;
+
+    try {
+      await dispatch(signup({ email: googleEmail, password: "google-auth", role: googleRole })).unwrap();
+      navigate("/login");
+    } catch (err) {
+      setError(reduxError || "Google signup failed. Please try again.");
     }
-    dispatch(signup({ email: googleEmail, password: "google-auth", role: googleRole }));
-    dispatch(login({ user: googleEmail, role: googleRole }));
-    navigate("/listings");
   };
 
   return (

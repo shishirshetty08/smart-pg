@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { addListing } from "../../store";
+import { createListing } from "../../store";
 import { FaArrowLeft, FaArrowRight, FaCheck, FaMale, FaFemale, FaUsers, FaHome, FaMapMarkerAlt, FaRupeeSign, FaFan, FaSnowflake, FaTv, FaCouch, FaCalendarAlt, FaCamera, FaUser, FaPhone, FaEnvelope } from "react-icons/fa";
 import { GiWashingMachine } from "react-icons/gi";
 import { motion } from "framer-motion";
@@ -31,7 +31,7 @@ const FlatmateForm = () => {
     address: "",
     landmark: "",
     zipCode: "",
-    location: null, // Stores { lat, lng }
+    location: null,
     deposit: "",
     rent: "",
     maintenance: "",
@@ -106,53 +106,52 @@ const FlatmateForm = () => {
     setError("");
   };
 
-  const handleSubmit = () => {
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async () => {
     const requiredFields = [
-      "title", "gender", "numFlatmates", "houseModel", "houseType", "city", "locality", "address",
-      "location", "deposit", "rent", "maintenance", "furnishingType", "description",
+      "title", "location", "rent", "description", "availableFrom",
       "ownerName", "ownerPhone", "ownerEmail", "images"
     ];
     const missingFields = requiredFields.filter((field) => !formData[field] || (Array.isArray(formData[field]) && formData[field].length === 0));
     if (missingFields.length > 0) {
-      setError("Please fill all required fields.");
-      console.log("Missing fields:", missingFields);
+      setError(`Please fill all required fields: ${missingFields.join(", ")}`);
       return;
     }
 
-    const newListing = {
-      _id: Date.now().toString(),
-      title: formData.title,
-      location: formData.location, // { lat, lng }
-      locationString: `${formData.city}, ${formData.locality}`,
-      rent: parseInt(formData.rent),
-      facilities: formData.amenities,
-      type: "flatmate",
-      image: formData.images[0], // First image for preview
-      images: formData.images, // Full array for detailed view
-      numFlatmates: parseInt(formData.numFlatmates),
-      deposit: parseInt(formData.deposit),
-      maintenance: parseInt(formData.maintenance),
-      availableFrom: formData.availableFrom.toISOString(),
-      gender: formData.gender,
-      houseModel: formData.houseModel,
-      houseType: formData.houseType,
-      furnishingType: formData.furnishingType,
-      description: formData.description,
-      ownerContact: {
-        name: formData.ownerName,
-        phone: formData.ownerPhone,
-        email: formData.ownerEmail,
-      },
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append("title", formData.title);
+    formDataToSend.append("location", JSON.stringify(formData.location || { lat: 0, lng: 0 }));
+    formDataToSend.append("locationString", `${formData.city}, ${formData.locality}${formData.landmark ? `, ${formData.landmark}` : ""}${formData.zipCode ? `, ${formData.zipCode}` : ""}`);
+    formDataToSend.append("rent", formData.rent);
+    formDataToSend.append("facilities", JSON.stringify([formData.houseModel, formData.houseType, formData.furnishingType])); // Map extra fields to facilities
+    formDataToSend.append("type", "Flatmate");
+    formDataToSend.append("description", `${formData.description}\nGender: ${formData.gender}\nFlatmates: ${formData.numFlatmates}\nDeposit: ${formData.deposit}\nMaintenance: ${formData.maintenance}\nNegotiable: ${formData.negotiable ? "Yes" : "No"}`);
+    formDataToSend.append("availableFrom", formData.availableFrom.toISOString());
+    formDataToSend.append("events", "No"); // Default value
+    formDataToSend.append("amenities", JSON.stringify(formData.amenities));
+    formDataToSend.append("leaseTerm", "0"); // Default value
+    formDataToSend.append("ownerContact", JSON.stringify({
+      name: formData.ownerName,
+      phone: formData.ownerPhone,
+      email: formData.ownerEmail,
+    }));
+    formData.images.forEach((file) => formDataToSend.append("images", file));
 
-    console.log("Dispatching flatmate listing:", newListing);
-    dispatch(addListing(newListing));
-    setSuccess("Flatmate listing added successfully!");
-    setTimeout(() => navigate("/owner-dashboard"), 2000);
-  };
+    // Debug FormData
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(`${key}:`, value);
+    }
 
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    try {
+      await dispatch(createListing(formDataToSend)).unwrap();
+      setSuccess("Flatmate listing added successfully!");
+      setTimeout(() => navigate("/owner-dashboard"), 2000);
+    } catch (error) {
+      setError("Error adding listing: " + (error.response?.data?.message || error.message));
+    }
   };
 
   const LocationMarker = () => {
@@ -201,9 +200,7 @@ const FlatmateForm = () => {
                     type="button"
                     onClick={() => handleChange("gender", option.value)}
                     className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 ${
-                      formData.gender === option.value
-                        ? "bg-primary-500 text-white border-primary-500"
-                        : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100"
+                      formData.gender === option.value ? "bg-primary-500 text-white" : "bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
                     <option.icon size={20} />
@@ -214,13 +211,13 @@ const FlatmateForm = () => {
             </div>
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaUsers className="text-primary-500" /> Number of Flatmates Required *
+                <FaUsers className="text-primary-500" /> Number of Flatmates *
               </label>
               <div className="flex items-center gap-4">
                 <button
                   type="button"
                   onClick={() => handleChange("numFlatmates", Math.max(1, formData.numFlatmates - 1))}
-                  className="p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600 transition-all duration-300"
+                  className="p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600"
                 >
                   -
                 </button>
@@ -228,7 +225,7 @@ const FlatmateForm = () => {
                 <button
                   type="button"
                   onClick={() => handleChange("numFlatmates", formData.numFlatmates + 1)}
-                  className="p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600 transition-all duration-300"
+                  className="p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600"
                 >
                   +
                 </button>
@@ -241,7 +238,7 @@ const FlatmateForm = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaHome className="text-primary-500" /> Select House Model *
+                <FaHome className="text-primary-500" /> House Model *
               </label>
               <div className="flex flex-wrap gap-3">
                 {["1RK", "1BHK", "2BHK", "3BHK", "4BHK", "4+BHK"].map((model) => (
@@ -250,9 +247,7 @@ const FlatmateForm = () => {
                     type="button"
                     onClick={() => handleChange("houseModel", model)}
                     className={`p-3 rounded-lg border transition-all duration-300 ${
-                      formData.houseModel === model
-                        ? "bg-primary-500 text-white border-primary-500"
-                        : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100"
+                      formData.houseModel === model ? "bg-primary-500 text-white" : "bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
                     {model}
@@ -262,7 +257,7 @@ const FlatmateForm = () => {
             </div>
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaHome className="text-primary-500" /> Select House Type *
+                <FaHome className="text-primary-500" /> House Type *
               </label>
               <div className="flex gap-4">
                 {["Flat", "Apartment", "House"].map((type) => (
@@ -271,9 +266,7 @@ const FlatmateForm = () => {
                     type="button"
                     onClick={() => handleChange("houseType", type)}
                     className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 ${
-                      formData.houseType === type
-                        ? "bg-primary-500 text-white border-primary-500"
-                        : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100"
+                      formData.houseType === type ? "bg-primary-500 text-white" : "bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
                     <FaHome size={20} />
@@ -302,7 +295,7 @@ const FlatmateForm = () => {
             </div>
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaHome className="text-primary-500" /> Select Locality *
+                <FaHome className="text-primary-500" /> Locality *
               </label>
               <input
                 type="text"
@@ -361,14 +354,10 @@ const FlatmateForm = () => {
               </label>
               <p className="text-neutral-600 mb-4">Double-tap on the map to pin the location</p>
               <div className="relative w-full h-64 rounded-lg overflow-hidden border border-neutral-200">
-                <MapContainer
-                  center={[28.6139, 77.2090]}
-                  zoom={13}
-                  style={{ height: "100%", width: "100%" }}
-                >
+                <MapContainer center={[28.6139, 77.2090]} zoom={13} style={{ height: "100%", width: "100%" }}>
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
                   <LocationMarker />
                 </MapContainer>
@@ -424,22 +413,16 @@ const FlatmateForm = () => {
               />
             </div>
             <div>
-              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                Negotiable?
-              </label>
+              <label className="block text-neutral-700 font-medium mb-2">Negotiable?</label>
               <div className="flex items-center gap-4">
                 <span className="text-neutral-700">{formData.negotiable ? "Yes" : "No"}</span>
                 <button
                   type="button"
                   onClick={() => handleChange("negotiable", !formData.negotiable)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ${
-                    formData.negotiable ? "bg-primary-500" : "bg-neutral-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ${formData.negotiable ? "bg-primary-500" : "bg-neutral-300"}`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ${
-                      formData.negotiable ? "translate-x-5" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ${formData.negotiable ? "translate-x-5" : "translate-x-1"}`}
                   />
                 </button>
               </div>
@@ -466,15 +449,13 @@ const FlatmateForm = () => {
                     key={amenity.name}
                     type="button"
                     onClick={() => {
-                      const updatedAmenities = formData.amenities.includes(amenity.name)
+                      const updated = formData.amenities.includes(amenity.name)
                         ? formData.amenities.filter((a) => a !== amenity.name)
                         : [...formData.amenities, amenity.name];
-                      handleChange("amenities", updatedAmenities);
+                      handleChange("amenities", updated);
                     }}
                     className={`p-4 rounded-lg border transition-all duration-300 ${
-                      formData.amenities.includes(amenity.name)
-                        ? "bg-primary-500 text-white border-primary-500"
-                        : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100"
+                      formData.amenities.includes(amenity.name) ? "bg-primary-500 text-white" : "bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
                     <amenity.icon size={24} className="mx-auto" />
@@ -484,18 +465,16 @@ const FlatmateForm = () => {
             </div>
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaHome className="text-primary-500" /> Select Furnishing Type *
+                <FaHome className="text-primary-500" /> Furnishing Type *
               </label>
               <div className="flex gap-4">
-                {["Semi Furnished", "Furnished", "Unfurnished"].map((type) => (
+                {["Unfurnished", "Semi Furnished", "Furnished"].map((type) => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => handleChange("furnishingType", type)}
                     className={`p-3 rounded-lg border transition-all duration-300 ${
-                      formData.furnishingType === type
-                        ? "bg-primary-500 text-white border-primary-500"
-                        : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100"
+                      formData.furnishingType === type ? "bg-primary-500 text-white" : "bg-white text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >
                     {type}
@@ -510,7 +489,7 @@ const FlatmateForm = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaUsers className="text-primary-500" /> Title *
+                <FaHome className="text-primary-500" /> Title *
               </label>
               <input
                 type="text"
@@ -523,7 +502,7 @@ const FlatmateForm = () => {
             </div>
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaUsers className="text-primary-500" /> Description *
+                <FaHome className="text-primary-500" /> Description *
               </label>
               <textarea
                 value={formData.description}
@@ -561,7 +540,7 @@ const FlatmateForm = () => {
                 value={formData.ownerName}
                 onChange={(e) => handleChange("ownerName", e.target.value)}
                 placeholder="e.g., John Doe"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -574,7 +553,7 @@ const FlatmateForm = () => {
                 value={formData.ownerPhone}
                 onChange={(e) => handleChange("ownerPhone", e.target.value)}
                 placeholder="e.g., +91 9876543210"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -587,7 +566,7 @@ const FlatmateForm = () => {
                 value={formData.ownerEmail}
                 onChange={(e) => handleChange("ownerEmail", e.target.value)}
                 placeholder="e.g., john.doe@example.com"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -611,14 +590,14 @@ const FlatmateForm = () => {
                   if (validFiles.length !== files.length) {
                     setError("Some files exceed 5MB limit.");
                   }
-                  handleChange("images", validFiles.map((file) => URL.createObjectURL(file)));
+                  handleChange("images", validFiles);
                 }}
                 className="w-full p-3 border border-neutral-200 rounded-lg bg-neutral-50"
               />
               {formData.images.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-4">
-                  {formData.images.map((img, idx) => (
-                    <img key={idx} src={img} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded-lg" />
+                  {formData.images.map((file, idx) => (
+                    <img key={idx} src={URL.createObjectURL(file)} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded-lg" />
                   ))}
                 </div>
               )}
@@ -643,23 +622,15 @@ const FlatmateForm = () => {
           <h2 className="text-3xl font-bold text-neutral-900 mb-6 text-center capitalize">
             Add Flatmate Listing
           </h2>
-          {error && (
-            <p className="text-red-500 bg-red-50 p-2 rounded mb-4 text-center">{error}</p>
-          )}
-          {success && (
-            <p className="text-green-500 bg-green-50 p-2 rounded mb-4 text-center">{success}</p>
-          )}
+          {error && <p className="text-red-500 bg-red-50 p-2 rounded mb-4 text-center">{error}</p>}
+          {success && <p className="text-green-500 bg-green-50 p-2 rounded mb-4 text-center">{success}</p>}
           <div className="space-y-6">
             {renderField()}
             <div className="flex justify-between">
               <button
                 onClick={handlePrevious}
                 disabled={step === 0}
-                className={`p-3 rounded-lg flex items-center gap-2 ${
-                  step === 0
-                    ? "bg-neutral-300 text-neutral-600 cursor-not-allowed"
-                    : "bg-primary-500 text-white hover:bg-primary-600"
-                } transition-all duration-300`}
+                className={`p-3 rounded-lg flex items-center gap-2 ${step === 0 ? "bg-neutral-300 text-neutral-600 cursor-not-allowed" : "bg-primary-500 text-white hover:bg-primary-600"} transition-all duration-300`}
               >
                 <FaArrowLeft /> Previous
               </button>
@@ -679,9 +650,7 @@ const FlatmateForm = () => {
                 </button>
               )}
             </div>
-            <p className="text-neutral-600 text-center">
-              Step {step + 1} of {fields.length}
-            </p>
+            <p className="text-neutral-600 text-center">Step {step + 1} of {fields.length}</p>
           </div>
         </motion.div>
       </div>

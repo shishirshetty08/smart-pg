@@ -1,5 +1,4 @@
-// src/features/home/Home.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { signup, login } from "../../store";
@@ -32,7 +31,7 @@ const itemVariants = {
 };
 
 function Home() {
-  const { role, user } = useSelector((state) => state.auth); // Remove users
+  const { role, user, error: authError } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -43,50 +42,62 @@ function Home() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("users");
 
+  // Update local error state when authError changes
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
+  // Redirect after successful login/signup
+  useEffect(() => {
+    if (user && isAuthModalOpen) {
+      setIsAuthModalOpen(false);
+      navigate("/listings");
+    }
+  }, [user, isAuthModalOpen, navigate]);
+
   const handleBrowseListings = () => {
     if (!user) setIsAuthModalOpen(true);
     else navigate("/listings");
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setError("All fields are required.");
       return;
     }
-    dispatch(login({ email, password }));
-    if (user) { // Check if login succeeded (user is set)
-      setIsAuthModalOpen(false);
-      navigate("/listings");
-    } else {
-      setError("Invalid email or password.");
+    try {
+      await dispatch(login({ email, password })).unwrap();
+      // Success handled by useEffect
+    } catch (err) {
+      // Error is set via Redux state and useEffect
     }
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setError("All fields are required.");
       return;
     }
-    dispatch(signup({ email, password, role: signupRole }));
-    if (user) { // Check if signup succeeded (user is set)
-      setIsAuthModalOpen(false);
-      navigate("/listings");
-    } else {
-      setError("Email already registered.");
+    try {
+      await dispatch(signup({ email, password, role: signupRole })).unwrap();
+      // Success handled by useEffect
+    } catch (err) {
+      // Error is set via Redux state and useEffect
     }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     const googleEmail = `googleuser${Date.now()}@example.com`;
     const googleRole = signupRole;
-    dispatch(signup({ email: googleEmail, password: "google-auth", role: googleRole }));
-    if (user) { // Check if signup succeeded
-      setIsAuthModalOpen(false);
-      navigate("/listings");
-    } else {
-      setError("Google account registration failed.");
+    try {
+      await dispatch(signup({ email: googleEmail, password: "google-auth", role: googleRole })).unwrap();
+      // Success handled by useEffect
+    } catch (err) {
+      // Error is set via Redux state and useEffect
     }
   };
 

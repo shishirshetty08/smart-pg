@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { addListing } from "../../store";
+import { createListing } from "../../store";
 import { FaArrowLeft, FaArrowRight, FaCheck, FaHome, FaMoneyBillAlt, FaList, FaMapMarkerAlt, FaPhone, FaEnvelope, FaUser, FaCamera, FaCalendarAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
@@ -21,7 +21,7 @@ const PGForm = () => {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     title: "",
-    location: "", // String for display
+    location: "",
     rent: "",
     facilities: [],
     meals: "No",
@@ -30,7 +30,7 @@ const PGForm = () => {
     images: [],
     description: "",
     availableFrom: new Date(),
-    mapLocation: null, // { lat, lng }
+    mapLocation: null,
     ownerName: "",
     ownerPhone: "",
     ownerEmail: "",
@@ -55,7 +55,7 @@ const PGForm = () => {
       setError("Please pin a location on the map.");
       return;
     }
-    if (step === 2 && (!formData.description)) {
+    if (step === 2 && !formData.description) {
       setError("Description is required.");
       return;
     }
@@ -76,45 +76,44 @@ const PGForm = () => {
     setError("");
   };
 
-  const handleSubmit = () => {
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async () => {
     const requiredFields = ["title", "location", "rent", "mapLocation", "description", "ownerName", "ownerPhone", "ownerEmail", "images"];
     const missingFields = requiredFields.filter((field) => !formData[field] || (Array.isArray(formData[field]) && formData[field].length === 0));
     if (missingFields.length > 0) {
       setError("Please fill all required fields.");
-      console.log("Missing fields:", missingFields);
       return;
     }
 
-    const newListing = {
-      _id: Date.now().toString(),
-      title: formData.title,
-      location: formData.mapLocation, // Use { lat, lng } from map
-      locationString: formData.location, // String for display
-      rent: parseInt(formData.rent),
-      facilities: formData.facilities,
-      type: "pg",
-      image: formData.images[0], // First image for preview
-      images: formData.images, // Full array for detailed view
-      description: formData.description,
-      availableFrom: formData.availableFrom.toISOString(),
-      meals: formData.meals,
-      curfew: formData.curfew,
-      occupancy: formData.occupancy,
-      ownerContact: {
-        name: formData.ownerName,
-        phone: formData.ownerPhone,
-        email: formData.ownerEmail,
-      },
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append("title", formData.title);
+    formDataToSend.append("location", JSON.stringify(formData.mapLocation));
+    formDataToSend.append("locationString", formData.location);
+    formDataToSend.append("rent", formData.rent);
+    formDataToSend.append("facilities", JSON.stringify(formData.facilities));
+    formDataToSend.append("type", "pg");
+    formDataToSend.append("description", formData.description);
+    formDataToSend.append("availableFrom", formData.availableFrom.toISOString());
+    formDataToSend.append("meals", formData.meals);
+    formDataToSend.append("curfew", formData.curfew);
+    formDataToSend.append("occupancy", formData.occupancy);
+    formDataToSend.append("ownerContact", JSON.stringify({
+      name: formData.ownerName,
+      phone: formData.ownerPhone,
+      email: formData.ownerEmail,
+    }));
+    formData.images.forEach((file) => formDataToSend.append("images", file));
 
-    console.log("Dispatching PG listing:", newListing);
-    dispatch(addListing(newListing));
-    setSuccess("PG listing added successfully!");
-    setTimeout(() => navigate("/owner-dashboard"), 2000);
-  };
-
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    try {
+      await dispatch(createListing(formDataToSend));
+      setSuccess("PG listing added successfully!");
+      setTimeout(() => navigate("/listings?type=pg"), 2000);
+    } catch (error) {
+      setError("Error adding listing: " + error.message);
+    }
   };
 
   const LocationMarker = () => {
@@ -144,7 +143,7 @@ const PGForm = () => {
                 value={formData.title}
                 onChange={(e) => handleChange("title", e.target.value)}
                 placeholder="e.g., Cozy PG in Chennai"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -157,7 +156,7 @@ const PGForm = () => {
                 value={formData.location}
                 onChange={(e) => handleChange("location", e.target.value)}
                 placeholder="e.g., Chennai"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -170,7 +169,7 @@ const PGForm = () => {
                 value={formData.rent}
                 onChange={(e) => handleChange("rent", e.target.value)}
                 placeholder="e.g., 8000"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -199,13 +198,11 @@ const PGForm = () => {
               </div>
             </div>
             <div>
-              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                Meals Included *
-              </label>
+              <label className="block text-neutral-700 font-medium mb-2">Meals Included</label>
               <select
                 value={formData.meals}
                 onChange={(e) => handleChange("meals", e.target.value)}
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
               >
                 {["No", "Yes"].map((option) => (
                   <option key={option} value={option}>{option}</option>
@@ -213,13 +210,11 @@ const PGForm = () => {
               </select>
             </div>
             <div>
-              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                Curfew *
-              </label>
+              <label className="block text-neutral-700 font-medium mb-2">Curfew</label>
               <select
                 value={formData.curfew}
                 onChange={(e) => handleChange("curfew", e.target.value)}
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
               >
                 {["No", "Yes"].map((option) => (
                   <option key={option} value={option}>{option}</option>
@@ -227,15 +222,13 @@ const PGForm = () => {
               </select>
             </div>
             <div>
-              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                Occupancy *
-              </label>
+              <label className="block text-neutral-700 font-medium mb-2">Occupancy</label>
               <select
                 value={formData.occupancy}
                 onChange={(e) => handleChange("occupancy", e.target.value)}
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
               >
-                {["Single", "Double"].map((option) => (
+                {["Single", "Double", "Triple"].map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
@@ -250,15 +243,11 @@ const PGForm = () => {
                 <FaMapMarkerAlt className="text-primary-500" /> Pin Location *
               </label>
               <p className="text-neutral-600 mb-4">Double-tap on the map to pin the location</p>
-              <div className="relative w-full h-64 rounded-lg overflow-hidden border border-neutral-200 shadow-sm hover:shadow-md transition-shadow duration-300">
-                <MapContainer
-                  center={[13.0827, 80.2707]} // Chennai coordinates
-                  zoom={13}
-                  style={{ height: "100%", width: "100%" }}
-                >
+              <div className="relative w-full h-64 rounded-lg overflow-hidden border border-neutral-200">
+                <MapContainer center={[13.0827, 80.2707]} zoom={13} style={{ height: "100%", width: "100%" }}>
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
                   <LocationMarker />
                 </MapContainer>
@@ -276,26 +265,13 @@ const PGForm = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
-                <FaHome className="text-primary-500" /> Title *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-                placeholder="e.g., Cozy PG in Chennai"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
                 <FaHome className="text-primary-500" /> Description *
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => handleChange("description", e.target.value)}
                 placeholder="e.g., Comfortable PG with all amenities..."
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 rows="4"
                 required
               />
@@ -307,7 +283,7 @@ const PGForm = () => {
               <DatePicker
                 onChange={(date) => handleChange("availableFrom", date)}
                 value={formData.availableFrom}
-                className="w-full p-3 border border-neutral-200 rounded-lg bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full"
                 calendarClassName="border border-neutral-200 rounded-lg shadow-lg"
                 clearIcon={null}
                 format="dd/MM/yyyy"
@@ -327,7 +303,7 @@ const PGForm = () => {
                 value={formData.ownerName}
                 onChange={(e) => handleChange("ownerName", e.target.value)}
                 placeholder="e.g., John Doe"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -340,7 +316,7 @@ const PGForm = () => {
                 value={formData.ownerPhone}
                 onChange={(e) => handleChange("ownerPhone", e.target.value)}
                 placeholder="e.g., +91 9876543210"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -353,7 +329,7 @@ const PGForm = () => {
                 value={formData.ownerEmail}
                 onChange={(e) => handleChange("ownerEmail", e.target.value)}
                 placeholder="e.g., john.doe@example.com"
-                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
                 required
               />
             </div>
@@ -366,25 +342,22 @@ const PGForm = () => {
               <label className="block text-neutral-700 font-medium mb-2 flex items-center gap-2">
                 <FaCamera className="text-primary-500" /> Upload Property Images *
               </label>
-              <p className="text-neutral-600 mb-4">Max File Size: 5MB, Accepted: JPG, GIF, PNG</p>
+              <p className="text-neutral-600 mb-4">Max File Size: 5MB, Accepted: JPG, PNG, GIF</p>
               <input
                 type="file"
                 multiple
-                accept=".jpg,.gif,.png"
+                accept=".jpg,.jpeg,.png,.gif"
                 onChange={(e) => {
-                  const files = Array.from(e.target.files);
-                  const validFiles = files.filter((file) => file.size <= 5 * 1024 * 1024);
-                  if (validFiles.length !== files.length) {
-                    setError("Some files exceed 5MB limit.");
-                  }
-                  handleChange("images", validFiles.map((file) => URL.createObjectURL(file)));
+                  const files = Array.from(e.target.files).filter((file) => file.size <= 5 * 1024 * 1024);
+                  if (files.length !== e.target.files.length) setError("Some files exceed 5MB limit.");
+                  handleChange("images", files);
                 }}
-                className="w-full p-3 border border-neutral-200 rounded-lg bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="w-full p-3 border border-neutral-200 rounded-lg bg-neutral-50"
               />
               {formData.images.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-4">
-                  {formData.images.map((img, idx) => (
-                    <img key={idx} src={img} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded-lg shadow-sm" />
+                  {formData.images.map((file, idx) => (
+                    <img key={idx} src={URL.createObjectURL(file)} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded-lg" />
                   ))}
                 </div>
               )}
@@ -409,23 +382,15 @@ const PGForm = () => {
           <h2 className="text-3xl font-bold text-neutral-900 mb-6 text-center capitalize">
             Add PG Listing
           </h2>
-          {error && (
-            <p className="text-red-500 bg-red-50 p-2 rounded mb-4 text-center">{error}</p>
-          )}
-          {success && (
-            <p className="text-green-500 bg-green-50 p-2 rounded mb-4 text-center">{success}</p>
-          )}
+          {error && <p className="text-red-500 bg-red-50 p-2 rounded mb-4 text-center">{error}</p>}
+          {success && <p className="text-green-500 bg-green-50 p-2 rounded mb-4 text-center">{success}</p>}
           <div className="space-y-6">
             {renderField()}
             <div className="flex justify-between">
               <button
                 onClick={handlePrevious}
                 disabled={step === 0}
-                className={`p-3 rounded-lg flex items-center gap-2 ${
-                  step === 0
-                    ? "bg-neutral-300 text-neutral-600 cursor-not-allowed"
-                    : "bg-primary-500 text-white hover:bg-primary-600"
-                } transition-all duration-300`}
+                className={`p-3 rounded-lg flex items-center gap-2 ${step === 0 ? "bg-neutral-300 text-neutral-600 cursor-not-allowed" : "bg-primary-500 text-white hover:bg-primary-600"} transition-all duration-300`}
               >
                 <FaArrowLeft /> Previous
               </button>
@@ -445,9 +410,7 @@ const PGForm = () => {
                 </button>
               )}
             </div>
-            <p className="text-neutral-600 text-center">
-              Step {step + 1} of {fields.length}
-            </p>
+            <p className="text-neutral-600 text-center">Step {step + 1} of {fields.length}</p>
           </div>
         </motion.div>
       </div>

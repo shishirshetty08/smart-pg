@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { addListing } from "../store";
+import { createListing } from "../store";
 import { FaArrowLeft, FaArrowRight, FaCheck } from "react-icons/fa";
 import { motion } from "framer-motion";
 
@@ -14,17 +14,23 @@ function StepForm({ type, fields }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState(
+    fields.reduce((acc, field) => ({
+      ...acc,
+      [field.name]: field.type === "checkbox" ? [] : field.type === "number" ? "" : "",
+    }), {})
+  );
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const handleNext = () => {
-    if (!fields[step].required || formData[fields[step].name]) {
-      setStep((prev) => Math.min(prev + 1, fields.length - 1));
-      setError("");
-    } else {
-      setError("This field is required.");
+    const currentField = fields[step];
+    if (currentField.required && !formData[currentField.name]) {
+      setError(`${currentField.label} is required.`);
+      return;
     }
+    setStep((prev) => Math.min(prev + 1, fields.length - 1));
+    setError("");
   };
 
   const handlePrevious = () => {
@@ -32,31 +38,41 @@ function StepForm({ type, fields }) {
     setError("");
   };
 
-  const handleChange = (value) => {
-    setFormData((prev) => ({ ...prev, [fields[step].name]: value }));
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const requiredFields = fields.filter((f) => f.required).map((f) => f.name);
-    const missingFields = requiredFields.filter((field) => !formData[field]);
+    const missingFields = requiredFields.filter((field) => !formData[field] || (Array.isArray(formData[field]) && formData[field].length === 0));
     if (missingFields.length > 0) {
       setError("Please fill all required fields.");
       return;
     }
 
-    const newListing = {
-      _id: Date.now().toString(),
-      ...formData,
-      type: type.toLowerCase(),
-      rent: parseInt(formData.rent || 0),
-      image: formData.image || "https://via.placeholder.com/300x200",
-      facilities: formData.facilities || [], // Ensure facilities is always an array
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append("type", type.toLowerCase());
+    fields.forEach((field) => {
+      if (field.name === "images" && formData[field.name]) {
+        formData[field.name].forEach((file) => formDataToSend.append("images", file));
+      } else if (Array.isArray(formData[field.name])) {
+        formDataToSend.append(field.name, JSON.stringify(formData[field.name]));
+      } else if (field.name === "location" && formData[field.name]) {
+        formDataToSend.append(field.name, JSON.stringify(formData[field.name]));
+      } else if (field.name === "availableFrom" && formData[field.name]) {
+        formDataToSend.append(field.name, formData[field.name].toISOString());
+      } else if (formData[field.name]) {
+        formDataToSend.append(field.name, formData[field.name]);
+      }
+    });
 
-    console.log("Dispatching roommate listing:", newListing);
-    dispatch(addListing(newListing));
-    setSuccess(`${type} listing added successfully!`);
-    setTimeout(() => navigate(`/listings?type=${type.toLowerCase()}`), 2000); // Navigate to listings
+    try {
+      await dispatch(createListing(formDataToSend));
+      setSuccess(`${type} listing added successfully!`);
+      setTimeout(() => navigate(`/listings?type=${type.toLowerCase()}`), 2000);
+    } catch (error) {
+      setError("Error adding listing: " + error.message);
+    }
   };
 
   const currentField = fields[step];
@@ -71,7 +87,7 @@ function StepForm({ type, fields }) {
           <input
             type={currentField.type}
             value={formData[currentField.name] || ""}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => handleChange(currentField.name, e.target.value)}
             placeholder={currentField.placeholder}
             className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
             required={currentField.required}
@@ -81,11 +97,12 @@ function StepForm({ type, fields }) {
       case "select":
         fieldComponent = (
           <select
-            value={formData[currentField.name] || currentField.options[0]}
-            onChange={(e) => handleChange(e.target.value)}
+            value={formData[currentField.name] || ""}
+            onChange={(e) => handleChange(currentField.name, e.target.value)}
             className="w-full p-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-neutral-50"
             required={currentField.required}
           >
+            <option value="">Select</option>
             {currentField.options.map((option) => (
               <option key={option} value={option}>{option}</option>
             ))}
@@ -104,6 +121,7 @@ function StepForm({ type, fields }) {
                   onChange={(e) => {
                     const values = formData[currentField.name] || [];
                     handleChange(
+                      currentField.name,
                       values.includes(option)
                         ? values.filter((v) => v !== option)
                         : [...values, option]
@@ -115,6 +133,18 @@ function StepForm({ type, fields }) {
               </label>
             ))}
           </div>
+        );
+        break;
+      case "file":
+        fieldComponent = (
+          <input
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.gif"
+            onChange={(e) => handleChange(currentField.name, Array.from(e.target.files))}
+            className="w-full p-3 border border-neutral-200 rounded-lg bg-neutral-50"
+            required={currentField.required}
+          />
         );
         break;
       default:

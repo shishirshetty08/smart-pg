@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { updateListing, deleteListing } from "../../store"; // Import new actions
+import { fetchListings, updateListing, deleteListing } from "../../store";
 import { FaUsers, FaBed, FaHouseUser, FaEdit, FaTrash, FaSave, FaTimes } from "react-icons/fa";
 import { motion } from "framer-motion";
 
@@ -23,12 +23,22 @@ function OwnerDashboard() {
 
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user || role !== "owner") {
       navigate("/login");
+    } else {
+      const loadListings = async () => {
+        try {
+          await dispatch(fetchListings()).unwrap();
+        } catch (err) {
+          setError("Failed to load listings: " + (err.message || "Unknown error"));
+        }
+      };
+      loadListings();
     }
-  }, [user, role, navigate]);
+  }, [user, role, navigate, dispatch]);
 
   const listingTypes = [
     { name: "Flatmate", icon: FaUsers, path: "/owner-dashboard/flatmate" },
@@ -53,15 +63,25 @@ function OwnerDashboard() {
     setEditedData({ ...listing });
   };
 
-  const handleSave = () => {
-    dispatch(updateListing({ id: editingId, updatedListing: editedData }));
-    setEditingId(null);
-    setEditedData({});
+  const handleSave = async () => {
+    try {
+      await dispatch(updateListing({ id: editingId, updatedListing: editedData })).unwrap();
+      setEditingId(null);
+      setEditedData({});
+      setError("");
+    } catch (err) {
+      setError("Failed to update listing: " + (err.message || "Unknown error"));
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this listing?")) {
-      dispatch(deleteListing(id));
+      try {
+        await dispatch(deleteListing(id)).unwrap();
+        setError("");
+      } catch (err) {
+        setError("Failed to delete listing: " + (err.message || "Unknown error"));
+      }
     }
   };
 
@@ -72,7 +92,6 @@ function OwnerDashboard() {
   return (
     <div className="min-h-screen bg-neutral-50 py-8 pt-24 font-['Inter']">
       <div className="container mx-auto px-4">
-        {/* Add New Listing Section */}
         <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 text-center mb-12">
           Add a New Listing
         </h2>
@@ -93,10 +112,12 @@ function OwnerDashboard() {
           ))}
         </div>
 
-        {/* My Listings Section */}
         <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 text-center mt-16 mb-12">
           My Listings
         </h2>
+        {error && (
+          <p className="text-red-500 bg-red-50 p-3 rounded mb-4 text-center">{error}</p>
+        )}
         {listings.length === 0 ? (
           <p className="text-neutral-600 text-center">You have no listings yet.</p>
         ) : (
@@ -120,7 +141,7 @@ function OwnerDashboard() {
                     />
                     <input
                       type="text"
-                      value={editedData.locationString || editedData.location || ""}
+                      value={editedData.locationString || ""}
                       onChange={(e) => handleChange("locationString", e.target.value)}
                       className="w-full p-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="Location (e.g., Delhi, Karol Bagh)"
@@ -203,7 +224,6 @@ function OwnerDashboard() {
           </div>
         )}
 
-        {/* Back to Home Button */}
         <button
           onClick={() => navigate("/")}
           className="mt-12 bg-primary-500 text-white p-3 rounded-lg w-full max-w-md mx-auto flex justify-center items-center hover:bg-primary-600 transition-all duration-300"

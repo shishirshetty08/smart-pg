@@ -1,4 +1,3 @@
-// src/features/auth/Login.jsx (unchanged)
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,21 +9,25 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { users, user } = useSelector((state) => state.auth);
+  const { user, error: reduxError } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (user) navigate("/listings");
   }, [user, navigate]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const foundUser = users.find((u) => u.email === email && u.password === password);
-    if (!foundUser) {
-      setError("Invalid email or password.");
+    if (!email || !password) {
+      setError("All fields are required.");
       return;
     }
-    dispatch(login({ user: email, role: foundUser.role }));
-    navigate("/listings");
+
+    try {
+      await dispatch(login({ email, password })).unwrap();
+      navigate("/listings");
+    } catch (err) {
+      setError(reduxError || "Invalid email or password.");
+    }
   };
 
   return (

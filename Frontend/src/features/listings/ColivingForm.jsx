@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { addListing } from "../../store";
+import { createListing } from "../../store";
 import { FaArrowLeft, FaArrowRight, FaCheck, FaHome, FaMoneyBillAlt, FaList, FaMapMarkerAlt, FaPhone, FaEnvelope, FaUser, FaCamera, FaCalendarAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
@@ -76,7 +76,11 @@ const ColivingForm = () => {
     setError("");
   };
 
-  const handleSubmit = () => {
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async () => {
     const requiredFields = ["title", "location", "rent", "mapLocation", "description", "ownerName", "ownerPhone", "ownerEmail", "images"];
     const missingFields = requiredFields.filter((field) => !formData[field] || (Array.isArray(formData[field]) && formData[field].length === 0));
     if (missingFields.length > 0) {
@@ -85,35 +89,32 @@ const ColivingForm = () => {
       return;
     }
 
-    const newListing = {
-      _id: Date.now().toString(),
-      title: formData.title,
-      location: formData.location,
-      rent: parseInt(formData.rent),
-      facilities: formData.facilities,
-      type: "coliving",
-      image: formData.images[0], // Use first image as primary
-      images: formData.images, // Store all images
-      description: formData.description,
-      availableFrom: formData.availableFrom.toISOString(),
-      events: formData.events,
-      amenities: formData.amenities,
-      leaseTerm: parseInt(formData.leaseTerm),
-      ownerContact: {
-        name: formData.ownerName,
-        phone: formData.ownerPhone,
-        email: formData.ownerEmail,
-      },
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append("title", formData.title);
+    formDataToSend.append("location", JSON.stringify(formData.mapLocation));
+    formDataToSend.append("locationString", formData.location);
+    formDataToSend.append("rent", formData.rent);
+    formDataToSend.append("facilities", JSON.stringify(formData.facilities));
+    formDataToSend.append("type", "coliving");
+    formDataToSend.append("description", formData.description);
+    formDataToSend.append("availableFrom", formData.availableFrom.toISOString());
+    formDataToSend.append("events", formData.events);
+    formDataToSend.append("amenities", JSON.stringify(formData.amenities));
+    formDataToSend.append("leaseTerm", formData.leaseTerm || 0);
+    formDataToSend.append("ownerContact", JSON.stringify({
+      name: formData.ownerName,
+      phone: formData.ownerPhone,
+      email: formData.ownerEmail,
+    }));
+    formData.images.forEach((file) => formDataToSend.append("images", file instanceof File ? file : null));
 
-    console.log("Dispatching Co-Living listing:", newListing);
-    dispatch(addListing(newListing));
-    setSuccess("Co-Living listing added successfully!");
-    setTimeout(() => navigate("/owner-dashboard"), 2000); // Navigate to dashboard
-  };
-
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    try {
+      await dispatch(createListing(formDataToSend));
+      setSuccess("Co-Living listing added successfully!");
+      setTimeout(() => navigate("/owner-dashboard"), 2000);
+    } catch (error) {
+      setError("Error adding listing: " + error.message);
+    }
   };
 
   const LocationMarker = () => {
@@ -384,14 +385,19 @@ const ColivingForm = () => {
                   if (validFiles.length !== files.length) {
                     setError("Some files exceed 5MB limit.");
                   }
-                  handleChange("images", validFiles.map((file) => URL.createObjectURL(file)));
+                  handleChange("images", validFiles);
                 }}
                 className="w-full p-3 border border-neutral-200 rounded-lg bg-neutral-50 shadow-sm hover:shadow-md transition-shadow duration-300"
               />
               {formData.images.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-4">
-                  {formData.images.map((img, idx) => (
-                    <img key={idx} src={img} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded-lg shadow-sm" />
+                  {formData.images.map((file, idx) => (
+                    <img
+                      key={idx}
+                      src={URL.createObjectURL(file)}
+                      alt={`Preview ${idx}`}
+                      className="w-full h-24 object-cover rounded-lg shadow-sm"
+                    />
                   ))}
                 </div>
               )}

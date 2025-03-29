@@ -1,4 +1,3 @@
-// src/components/Navbar.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -125,7 +124,7 @@ function Navbar() {
                 className="text-neutral-700 hover:text-primary-500 transition-colors duration-300 font-medium"
               >
                 Dashboard
-              </Link>
+            </Link>
             )}
             {user ? (
               <>
