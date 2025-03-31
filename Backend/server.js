@@ -163,6 +163,20 @@ app.get("/api/listings", authenticateToken, async (req, res) => {
   }
 });
 
+app.get("/api/listings/:id", authenticateToken, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ message: "Listing not found" });
+    // Optionally restrict to owner only; remove this check if all users should see details
+    if (listing.ownerEmail !== req.user.email) {
+      return res.status(403).json({ message: "Unauthorized to view this listing" });
+    }
+    res.json(listing);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching listing", error: error.message });
+  }
+});
+
 app.delete("/api/listings/:id", authenticateToken, async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id);

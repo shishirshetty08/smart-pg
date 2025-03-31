@@ -30,46 +30,60 @@ const listingsSlice = createSlice({
 
 export const { setListings, addListing, updateListing, deleteListing } = listingsSlice.actions;
 
-// Thunks for API calls
-export const fetchListings = () => async (dispatch) => {
+export const fetchListings = () => async (dispatch, getState) => {
   try {
-    const response = await axios.get("http://localhost:5000/api/listings");
+    const token = getState().auth.token; // Assuming auth slice has token
+    const response = await axios.get("http://localhost:5000/api/listings", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     dispatch(setListings(response.data));
   } catch (error) {
-    console.error("Error fetching listings:", error);
+    console.error("Error fetching listings:", error.response?.data || error.message);
+    throw error; // Let the caller handle the error
   }
 };
 
-export const createListing = (listingData) => async (dispatch) => {
+export const createListing = (listingData) => async (dispatch, getState) => {
   try {
+    const token = getState().auth.token;
     const response = await axios.post("http://localhost:5000/api/listings", listingData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
     });
     dispatch(addListing(response.data));
   } catch (error) {
-    console.error("Error creating listing:", error);
+    console.error("Error creating listing:", error.response?.data || error.message);
     throw error;
   }
 };
 
-export const updateListingThunk = (id, updatedListing) => async (dispatch) => {
+export const updateListingThunk = (id, updatedListing) => async (dispatch, getState) => {
   try {
+    const token = getState().auth.token;
     const response = await axios.put(`http://localhost:5000/api/listings/${id}`, updatedListing, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
     });
     dispatch(updateListing({ id, updatedListing: response.data }));
   } catch (error) {
-    console.error("Error updating listing:", error);
+    console.error("Error updating listing:", error.response?.data || error.message);
     throw error;
   }
 };
 
-export const deleteListingThunk = (id) => async (dispatch) => {
+export const deleteListingThunk = (id) => async (dispatch, getState) => {
   try {
-    await axios.delete(`http://localhost:5000/api/listings/${id}`);
+    const token = getState().auth.token;
+    await axios.delete(`http://localhost:5000/api/listings/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     dispatch(deleteListing(id));
   } catch (error) {
-    console.error("Error deleting listing:", error);
+    console.error("Error deleting listing:", error.response?.data || error.message);
     throw error;
   }
 };
